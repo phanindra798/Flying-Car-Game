@@ -1,0 +1,28 @@
+{
+  "name": "boostline",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "An arcade highway stunt runner built with TypeScript and Three.js.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:mobile": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/dm-sans": "^5.3.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "latest",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}
