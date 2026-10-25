@@ -1,22 +1,6 @@
-type Vec3 = readonly [number, number, number];
-function carBounds({ pitch, roll }: { pitch: number; roll: number }) {
-  const cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
-  return [Math.abs(cr) * 0.82 + Math.abs(sr) * 0.58,
-    Math.abs(cp * sr) * 0.82 + Math.abs(cp * cr) * 0.58 + Math.abs(sp) * 1.82,
-    Math.abs(sp * sr) * 0.82 + Math.abs(sp * cr) * 0.58 + Math.abs(cp) * 1.82];
-}
-// Sweep a point through the traffic bounds expanded by the player's body bounds.
-export function segmentHitsBox(start: readonly number[], end: readonly number[], half: readonly number[]): boolean {
-  let enter = 0, leave = 1;
-  for (let i = 0; i < 3; i++) {
-    const delta = end[i] - start[i];
-    if (Math.abs(delta) < 1e-9) { if (Math.abs(start[i]) > half[i]) return false; continue; }
-    const a = (-half[i] - start[i]) / delta, b = (half[i] - start[i]) / delta;
-    enter = Math.max(enter, Math.min(a, b)); leave = Math.min(leave, Math.max(a, b));
-    if (enter > leave) return false;
-  }
-  return true;
-}
+import { carBounds, sweptCarHitsBox, type Vec3 } from './collision';
+import { TrafficDirector, TRAFFIC_SPEED } from './traffic';
+export { segmentHitsBox } from './collision';
 
 export const LANES = [-5.25, -1.75, 1.75, 5.25] as const;
 export const FIXED_STEP = 1 / 60;
@@ -69,7 +53,7 @@ export class Simulation {
   private stunt: Stunt | null = null;
   private groundedTime = 0;
   private randomState = 42;
-  private nextTraffic = 235;
+  private director = new TrafficDirector();
   private vehicleId = 0;
 
   get score() { return Math.floor(this.distance * 1.4) + this.banked; }
@@ -87,7 +71,7 @@ export class Simulation {
     this.banked = 0; this.combo = 1; this.maxCombo = 1;
     this.pendingTricks = 0; this.tricksLanded = 0; this.crashReason = '';
     this.stunt = null; this.groundedTime = 0;
-    this.randomState = seed >>> 0; this.nextTraffic = 235; this.vehicleId = 0;
+    this.randomState = seed >>> 0; this.director = new TrafficDirector(seed); this.vehicleId = 0;
     this.traffic = []; this.events = [];
     if (mode === 'run') {
       this.spawn(0, 62, 'car');
@@ -132,7 +116,7 @@ export class Simulation {
     const oldX = this.x;
     const oldHeight = this.height;
     const oldDistance = this.distance;
-    const beforeBounds = carBounds(this);
+    const oldRotation = { pitch: this.pitch, roll: this.roll };
     this.elapsed += dt;
     this.x += (LANES[this.lane] - this.x) * (1 - Math.exp(-12 * dt));
     this.boostActive = input.boost && this.energy > 0;
@@ -181,7 +165,7 @@ export class Simulation {
       const start: Vec3 = [oldX - LANES[vehicle.lane], oldHeight + 0.78 - dimensions.height / 2, previous - oldDistance];
       const end: Vec3 = [this.x - LANES[vehicle.lane], this.height + 0.78 - dimensions.height / 2, vehicle.distance - this.distance];
       const half: Vec3 = [dimensions.width / 2, dimensions.height / 2, dimensions.length / 2];
-      if (segmentHitsBox(start, end, half.map((n, i) => n + Math.max(beforeBounds[i], bounds[i])))) {
+      if (sweptCarHitsBox(start, end, oldRotation, this, half)) {
         this.crash('Traffic got the better of you. Look ahead and choose your line.');
         break;
       }
@@ -200,11 +184,13 @@ export class Simulation {
     if (this.phase !== 'playing') return;
     this.traffic = this.traffic.filter(v => v.distance > this.distance - 35);
     if (this.mode === 'run') {
-      const flowOffset = 11 * this.elapsed;
-      while (this.nextTraffic + flowOffset < this.distance + 420) {
-        const kind = this.random() < 0.25 ? 'truck' : this.random() < 0.4 ? 'van' : 'car';
-        this.spawn(Math.floor(this.random() * 4), this.nextTraffic + flowOffset, kind);
-        this.nextTraffic += 65 + this.random() * 30;
+      const flowOffset = TRAFFIC_SPEED * this.elapsed;
+      while (this.director.nextDistance + flowOffset < this.distance + 420) {
+        const row = this.director.next();
+        for (const lane of row.blockedLanes) {
+          const kind = this.random() < 0.3 ? 'truck' : this.random() < 0.4 ? 'van' : 'car';
+          this.spawn(lane, row.distance + flowOffset, kind);
+        }
       }
     }
   }
@@ -250,7 +236,7 @@ export class Simulation {
 
   private spawn(lane: number, distance: number, kind: Traffic['kind']) {
     this.traffic.push({ id: this.vehicleId++, lane, distance, kind,
-      speed: 11,
+      speed: TRAFFIC_SPEED,
       color: [0x536b71, 0xb97050, 0xc3bfa9, 0x284e4d, 0x584956][Math.floor(this.random() * 5)], nearMissChecked: false });
   }
 

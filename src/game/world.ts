@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LANES, VEHICLES, type Simulation, type Traffic } from './simulation';
+import { LANES, VEHICLES, type GameEvent, type Simulation, type Traffic } from './simulation';
+import { flightAssist } from './flight-assist';
+import type { TrafficThreat } from './traffic-warning';
+import type { GhostPose } from './ghost';
+import { GameEffects } from './effects';
+import { DEFAULT_SETTINGS, graphicsProfile, type GraphicsSettings } from './settings';
 
 const ROAD_LENGTH = 500;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -9,9 +14,19 @@ export class World {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(57, 1, 0.1, 1000);
+  private readonly effects = new GameEffects(this.scene);
+  private graphicsSettings: GraphicsSettings = { ...DEFAULT_SETTINGS };
   private readonly car = new THREE.Group();
   private readonly carTilt = new THREE.Group();
+  private readonly playerPaint = new THREE.MeshStandardMaterial({ color: 0xe5e5d9, roughness: 0.75 });
+  private readonly ghost = new THREE.Group();
+  private readonly ghostFill = new THREE.MeshBasicMaterial({ color: 0x83e7f5, transparent: true, opacity: 0.12, depthWrite: false });
   private readonly shadow: THREE.Mesh;
+  private readonly landingMarker = new THREE.Mesh(new THREE.RingGeometry(1, 1.07, 32), new THREE.MeshBasicMaterial({ color: 0xd6ff78, transparent: true, opacity: 0.8, depthWrite: false }));
+  private readonly landingPulse = new THREE.Mesh(new THREE.RingGeometry(1, 1.09, 32), new THREE.MeshBasicMaterial({ color: 0xd6ff78, transparent: true, opacity: 0, depthWrite: false }));
+  private readonly trafficHighlight = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffd684 }));
+  private pulseAge = 1;
+  private pulseDistance = 0;
   private readonly flameLeft: THREE.Mesh;
   private readonly flameRight: THREE.Mesh;
   private readonly dashes: THREE.InstancedMesh;
@@ -30,7 +45,7 @@ export class World {
   private reducedMotion = false;
   private readonly touchDevice = matchMedia('(pointer: coarse)');
 
-  constructor(host: HTMLElement) {
+  constructor(host: HTMLElement, settings: GraphicsSettings = DEFAULT_SETTINGS) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -96,6 +111,17 @@ export class World {
     this.carTilt.add(this.createVehicle('car', 0xe5e5d9, true));
     this.car.add(this.carTilt);
     this.scene.add(this.car);
+    // Merge a copy of the procedural car into two draw calls: translucent body and outline.
+    const pieces: THREE.BufferGeometry[] = [];
+    this.carTilt.updateMatrixWorld(true);
+    this.carTilt.traverse(object => {
+      if (object instanceof THREE.Mesh) pieces.push(object.geometry.clone().applyMatrix4(object.matrixWorld));
+    });
+    const silhouette = mergeGeometries(pieces)!;
+    pieces.forEach(piece => piece.dispose());
+    this.ghost.add(new THREE.Mesh(silhouette, this.ghostFill));
+    this.ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(silhouette), new THREE.LineBasicMaterial({ color: 0x83e7f5, transparent: true, opacity: 0.65, depthWrite: false })));
+    this.ghost.visible = false; this.scene.add(this.ghost);
     const flameMaterial = new THREE.MeshBasicMaterial({ color: 0xcaff77, transparent: true, opacity: 0.85, depthWrite: false });
     const flameGeometry = new THREE.ConeGeometry(0.15, 1, 12).rotateX(-Math.PI / 2);
     this.flameLeft = new THREE.Mesh(flameGeometry, flameMaterial);
@@ -105,11 +131,14 @@ export class World {
     this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 5.2), new THREE.MeshBasicMaterial({ color: 0x1a2424, transparent: true, opacity: 0.3, depthWrite: false }));
     this.shadow.rotation.x = -Math.PI / 2; this.shadow.position.y = 0.035;
     this.scene.add(this.shadow);
+    this.trafficHighlight.visible = false; this.scene.add(this.trafficHighlight);
+    for (const marker of [this.landingMarker, this.landingPulse]) {
+      marker.rotation.x = -Math.PI / 2; marker.visible = false; this.scene.add(marker);
+    }
     this.camera.position.set(0.5, 5.0, 13.5);
     this.lookTarget.set(0, 1.5, -29);
     this.camera.lookAt(this.lookTarget);
-    this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.resize();
+    this.applyGraphics(settings);
     window.addEventListener('resize', this.resize);
   }
 
@@ -162,6 +191,10 @@ export class World {
       this.box(0.29, 0.02, 1.2, 0xb8d77a, 0, base + 1.04, -1.2, group);
       this.box(0.36, 0.12, 0.03, 0xe7ecd9, 0, base + 0.62, length / 2 + 0.08, group);
     }
+    if (player) {
+      const sharedPaint = this.material(paint);
+      group.traverse(object => { if (object instanceof THREE.Mesh && object.material === sharedPaint) object.material = this.playerPaint; });
+    }
     group.userData.poolKey = `${kind}:${paint}`;
     return group;
   }
@@ -202,13 +235,41 @@ export class World {
     this.scene.add(group); return group;
   }
 
+  applyGraphics(settings: GraphicsSettings) {
+    this.graphicsSettings = { ...settings };
+    const profile = graphicsProfile(settings, this.touchDevice.matches, matchMedia('(prefers-reduced-motion: reduce)').matches, devicePixelRatio);
+    this.reducedMotion = profile.reduceMotion; this.effects.configure(profile.particleLimit);
+    this.resize();
+  }
+  inspectEffects() { return { ...this.effects.inspect(), reducedMotion: this.reducedMotion, fov: this.camera.fov }; }
+
   readonly resize = () => {
     const width = window.innerWidth, height = window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.touchDevice.matches ? 1.25 : 2));
+    this.renderer.setPixelRatio(graphicsProfile(this.graphicsSettings, this.touchDevice.matches, this.reducedMotion, devicePixelRatio).pixelRatio);
     this.renderer.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   };
+
+  setPaint(color: number) { this.playerPaint.color.setHex(color); }
+  get paintColor() { return this.playerPaint.color.getHex(); }
+
+  get ghostVisible() { return this.ghost.visible; }
+
+  get highlightVisible() { return this.trafficHighlight.visible; }
+
+  get markerVisible() { return this.landingMarker.visible; }
+
+  resetFeedback() { this.effects.clear(); this.ghost.visible = false; this.trafficHighlight.visible = false; this.pulseAge = 1; this.landingPulse.visible = false; this.landingMarker.visible = false; }
+
+  onEvent(event: GameEvent, sim: Simulation) {
+    this.effects.onEvent(event, sim);
+    if (!event.landing) return;
+    this.pulseAge = 0; this.pulseDistance = sim.distance;
+    this.landingPulse.position.set(sim.x, 0.045, 3);
+    const bad = event.landing.quality === 'rough' || event.landing.quality === 'unfinished';
+    this.landingPulse.material.color.setHex(bad ? 0xff9b75 : event.landing.quality === 'clean' ? 0xd6ff78 : 0xe5f0e8);
+  }
 
   // Read-only screen bounds used by development checks for camera/control overlap.
   inspectCarBounds() {
@@ -221,7 +282,7 @@ export class World {
       top: (1 - Math.max(...points.map(p => p.y))) / 2, bottom: (1 - Math.min(...points.map(p => p.y))) / 2 };
   }
 
-  render(sim: Simulation, dt: number, time: number) {
+  render(sim: Simulation, dt: number, time: number, slam = false, threat: TrafficThreat | null = null, ghost: GhostPose | null = null) {
     const distance = sim.distance;
     for (let i = 0; i < 126; i++) {
       this.dummy.position.set([-3.5, 0, 3.5][i % 3], 0.018, 20 - Math.floor(i / 3) * 12 + distance % 12);
@@ -245,6 +306,13 @@ export class World {
 
     this.car.position.set(sim.x, sim.height + 0.78, 3);
     this.carTilt.rotation.set(sim.pitch, -(LANES[sim.lane] - sim.x) * 0.075, sim.roll);
+    const ghostGap = ghost ? ghost.distance - sim.distance : 0;
+    this.ghost.visible = !!ghost && ghostGap > -10 && ghostGap < 220;
+    if (ghost) {
+      this.ghost.position.set(ghost.x, ghost.height + 0.78, 3 - ghostGap);
+      this.ghost.rotation.set(ghost.pitch, 0, ghost.roll);
+      this.ghostFill.opacity = Math.abs(ghostGap) < 3 && Math.abs(ghost.x - sim.x) < 1.5 ? 0.035 : 0.12;
+    }
     const on = sim.phase === 'playing' && (sim.thrustActive || sim.boostActive);
     this.flameLeft.visible = on; this.flameRight.visible = on;
     const length = 0.9 + (this.reducedMotion ? 0 : Math.sin(time * 41) * 0.12) + (sim.boostActive ? 0.65 : 0);
@@ -252,6 +320,18 @@ export class World {
     this.shadow.position.x = sim.x; this.shadow.position.z = 3;
     this.shadow.scale.setScalar(1 + sim.height * 0.04);
     (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.28 / (1 + sim.height * 0.17);
+    this.landingMarker.visible = sim.airborne && sim.phase !== 'ready' && sim.phase !== 'crashed';
+    this.landingMarker.position.set(sim.x, 0.04, 3);
+    this.landingMarker.scale.set(1.35, 2.5, 1);
+    this.landingMarker.material.color.setHex(flightAssist(sim, slam).color);
+    if (sim.phase === 'playing') this.pulseAge += dt;
+    this.landingPulse.visible = this.pulseAge < 0.55 && (sim.phase === 'playing' || sim.phase === 'paused') && !this.reducedMotion;
+    this.landingPulse.position.z = 3 + sim.distance - this.pulseDistance;
+    this.landingPulse.scale.set(1.4 + this.pulseAge * 4, 2.5 + this.pulseAge * 5, 1);
+    this.landingPulse.material.opacity = Math.max(0, 0.8 * (1 - this.pulseAge / 0.55));
+
+    this.effects.update(sim, dt);
+
     const active = new Set(sim.traffic.map(v => v.id));
     for (const [id, model] of this.trafficModels) {
       if (active.has(id)) continue;
@@ -277,6 +357,14 @@ export class World {
       }
       model.visible = true;
       model.position.set(LANES[vehicle.lane], 0, 3 - (vehicle.distance - distance));
+    }
+    const danger = threat && sim.phase === 'playing' ? sim.traffic.find(vehicle => vehicle.id === threat.id) : undefined;
+    this.trafficHighlight.visible = !!danger;
+    if (danger) {
+      const size = VEHICLES[danger.kind];
+      this.trafficHighlight.position.set(LANES[danger.lane], size.height / 2, 3 - (danger.distance - distance));
+      this.trafficHighlight.scale.set(size.width + 0.18, size.height + 0.12, size.length + 0.18);
+      this.trafficHighlight.material.color.setHex(threat!.urgent ? 0xff9b75 : 0xffd684);
     }
     const blend = 1 - Math.exp(-5 * dt);
     const ready = sim.phase === 'ready';
