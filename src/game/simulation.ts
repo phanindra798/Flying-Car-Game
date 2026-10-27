@@ -1,3 +1,4 @@
+import { getCar, type CarId } from './garage-cars';
 import { carBounds, sweptCarHitsBox, type Vec3 } from './collision';
 import { TrafficDirector, TRAFFIC_SPEED } from './traffic';
 export { segmentHitsBox } from './collision';
@@ -28,6 +29,9 @@ export const VEHICLES = {
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
 export class Simulation {
+  private car = getCar('vector');
+  get carId() { return this.car.id; }
+  get tuning() { return this.car; }
   phase: Phase = 'ready';
   mode: Mode = 'run';
   x: number = LANES[1];
@@ -61,11 +65,12 @@ export class Simulation {
   get stuntRemaining() { return this.stunt ? Math.max(0, this.stunt.duration - this.stunt.time) : 0; }
   get pendingLandingPoints() { return this.pendingTricks > 0 ? (this.pendingTricks * 120 + 50) * this.combo : 0; }
 
-  start(mode: Mode = 'run', seed = 42) {
+  start(mode: Mode = 'run', seed = 42, carId: CarId = 'vector') {
+    this.car = getCar(carId);
     this.mode = mode;
     this.phase = 'playing';
     this.x = LANES[1]; this.lane = 1;
-    this.height = 0; this.verticalSpeed = 0; this.speed = 23;
+    this.height = 0; this.verticalSpeed = 0; this.speed = this.car.cruise;
     this.distance = 0; this.elapsed = 0; this.energy = 100;
     this.pitch = 0; this.roll = 0; this.boostActive = false; this.thrustActive = false;
     this.banked = 0; this.combo = 1; this.maxCombo = 1;
@@ -87,7 +92,7 @@ export class Simulation {
 
   jump() {
     if (this.phase !== 'playing' || this.airborne || this.energy < 7) return false;
-    this.verticalSpeed = 8.8;
+    this.verticalSpeed = this.car.jump;
     this.energy -= 7;
     this.groundedTime = 0;
     this.events.push({ kind: 'jump', title: '', detail: '' });
@@ -96,7 +101,7 @@ export class Simulation {
 
   trick(kind: TrickKind) {
     if (this.phase !== 'playing' || !this.airborne || this.stunt) return false;
-    this.stunt = { kind, time: 0, duration: kind === 'flip' ? 0.7 : 0.66 };
+    this.stunt = { kind, time: 0, duration: (kind === 'flip' ? 0.7 : 0.66) * this.car.stunt };
     return true;
   }
 
@@ -118,25 +123,25 @@ export class Simulation {
     const oldDistance = this.distance;
     const oldRotation = { pitch: this.pitch, roll: this.roll };
     this.elapsed += dt;
-    this.x += (LANES[this.lane] - this.x) * (1 - Math.exp(-12 * dt));
+    this.x += (LANES[this.lane] - this.x) * (1 - Math.exp(-this.car.steering * dt));
     this.boostActive = input.boost && this.energy > 0;
-    const targetSpeed = 23 + Math.min(12, this.elapsed * 0.055) + (this.boostActive ? 15 : 0);
+    const targetSpeed = this.car.cruise + Math.min(12, this.elapsed * 0.055) + (this.boostActive ? this.car.boost : 0);
     this.speed += (targetSpeed - this.speed) * (1 - Math.exp(-3 * dt));
     this.distance += this.speed * dt;
 
     const wasAirborne = this.airborne;
     this.thrustActive = input.thrust && wasAirborne && this.energy > 0 && !input.slam;
-    let consumption = this.boostActive ? 17 : 0;
+    let consumption = this.boostActive ? this.car.boostDrain : 0;
     if (wasAirborne) {
       this.groundedTime = 0;
-      consumption += this.thrustActive ? 29 : 0;
-      const acceleration = -19 + (this.thrustActive ? 26 : 0) - (input.slam ? 35 : 0);
+      consumption += this.thrustActive ? this.car.flightDrain : 0;
+      const acceleration = -19 + (this.thrustActive ? this.car.lift : 0) - (input.slam ? 35 : 0);
       this.verticalSpeed = clamp(this.verticalSpeed + acceleration * dt, -24, 11);
       this.height += this.verticalSpeed * dt;
       if (this.height > 9) { this.height = 9; this.verticalSpeed = Math.min(0, this.verticalSpeed); }
     } else {
       this.groundedTime += dt;
-      if (!this.boostActive && this.groundedTime > 0.65) this.energy += 19 * dt;
+      if (!this.boostActive && this.groundedTime > 0.65) this.energy += this.car.recharge * dt;
     }
     this.energy = clamp(this.energy - consumption * dt, 0, 100);
 

@@ -18,7 +18,7 @@ export function trafficThreat(sim: Simulation, input: HeldInput): TrafficThreat 
     if (seconds > 3 || (nearest && seconds >= nearest.seconds)) continue;
     if (sim.airborne) {
       const thrust = input.thrust && sim.energy > 0 && !input.slam;
-      const acceleration = -19 + (thrust ? 26 : 0) - (input.slam ? 35 : 0);
+      const acceleration = -19 + (thrust ? sim.tuning.lift : 0) - (input.slam ? 35 : 0);
       const projectedHeight = Math.max(0, Math.min(9, sim.height + sim.verticalSpeed * seconds + acceleration * seconds * seconds / 2));
       if (projectedHeight + 0.78 - bounds[1] > dimensions.height + 0.25) continue;
     }

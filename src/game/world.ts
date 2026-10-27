@@ -5,6 +5,9 @@ import { flightAssist } from './flight-assist';
 import type { TrafficThreat } from './traffic-warning';
 import type { GhostPose } from './ghost';
 import { GameEffects } from './effects';
+import type { CarId } from './garage-cars';
+import { createPlayerVehicle } from './player-vehicle';
+import { ThrusterRig, ThrusterState, vehicleRotation } from './thrusters';
 import { DEFAULT_SETTINGS, graphicsProfile, type GraphicsSettings } from './settings';
 
 const ROAD_LENGTH = 500;
@@ -18,7 +21,7 @@ export class World {
   private graphicsSettings: GraphicsSettings = { ...DEFAULT_SETTINGS };
   private readonly car = new THREE.Group();
   private readonly carTilt = new THREE.Group();
-  private readonly playerPaint = new THREE.MeshStandardMaterial({ color: 0xe5e5d9, roughness: 0.75 });
+  private readonly playerPaint = new THREE.MeshStandardMaterial({ color: 0xe5e5d9, metalness: 0.5, roughness: 0.36 });
   private readonly ghost = new THREE.Group();
   private readonly ghostFill = new THREE.MeshBasicMaterial({ color: 0x83e7f5, transparent: true, opacity: 0.12, depthWrite: false });
   private readonly shadow: THREE.Mesh;
@@ -27,8 +30,14 @@ export class World {
   private readonly trafficHighlight = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffd684 }));
   private pulseAge = 1;
   private pulseDistance = 0;
-  private readonly flameLeft: THREE.Mesh;
-  private readonly flameRight: THREE.Mesh;
+  private readonly thrusters = new ThrusterState();
+  private readonly jets = new ThrusterRig();
+  private playerModel = createPlayerVehicle(this.playerPaint);
+  private currentCar: CarId = 'vector';
+  private readonly modelCache = new Map<CarId, THREE.Group>([['vector', this.playerModel]]);
+  private readonly ghostModels = new Map<CarId, THREE.Group>();
+  private currentGhost: CarId | null = null;
+  private readonly ghostOutline = new THREE.LineBasicMaterial({ color: 0x83e7f5, transparent: true, opacity: 0.65, depthWrite: false });
   private readonly dashes: THREE.InstancedMesh;
   private readonly posts: THREE.InstancedMesh;
   private readonly palmTrunks: THREE.InstancedMesh;
@@ -108,26 +117,12 @@ export class World {
     this.scene.add(this.palmTrunks, this.palmLeaves);
     for (let n = 0; n < 4; n++) this.roadsideSigns.push(this.createSign(n));
 
-    this.carTilt.add(this.createVehicle('car', 0xe5e5d9, true));
+    this.carTilt.add(this.playerModel);
     this.car.add(this.carTilt);
     this.scene.add(this.car);
-    // Merge a copy of the procedural car into two draw calls: translucent body and outline.
-    const pieces: THREE.BufferGeometry[] = [];
-    this.carTilt.updateMatrixWorld(true);
-    this.carTilt.traverse(object => {
-      if (object instanceof THREE.Mesh) pieces.push(object.geometry.clone().applyMatrix4(object.matrixWorld));
-    });
-    const silhouette = mergeGeometries(pieces)!;
-    pieces.forEach(piece => piece.dispose());
-    this.ghost.add(new THREE.Mesh(silhouette, this.ghostFill));
-    this.ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(silhouette), new THREE.LineBasicMaterial({ color: 0x83e7f5, transparent: true, opacity: 0.65, depthWrite: false })));
+    this.setGhostCar('vector');
     this.ghost.visible = false; this.scene.add(this.ghost);
-    const flameMaterial = new THREE.MeshBasicMaterial({ color: 0xcaff77, transparent: true, opacity: 0.85, depthWrite: false });
-    const flameGeometry = new THREE.ConeGeometry(0.15, 1, 12).rotateX(-Math.PI / 2);
-    this.flameLeft = new THREE.Mesh(flameGeometry, flameMaterial);
-    this.flameRight = new THREE.Mesh(flameGeometry, flameMaterial);
-    this.flameLeft.position.set(-0.57, -0.16, 2.1); this.flameRight.position.set(0.57, -0.16, 2.1);
-    this.carTilt.add(this.flameLeft, this.flameRight);
+    this.carTilt.add(this.jets);
     this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 5.2), new THREE.MeshBasicMaterial({ color: 0x1a2424, transparent: true, opacity: 0.3, depthWrite: false }));
     this.shadow.rotation.x = -Math.PI / 2; this.shadow.position.y = 0.035;
     this.scene.add(this.shadow);
@@ -161,10 +156,10 @@ export class World {
     mesh.position.set(x, y, z); parent.add(mesh); return mesh;
   }
 
-  private createVehicle(kind: Traffic['kind'], paint: number, player = false) {
+  private createVehicle(kind: Traffic['kind'], paint: number) {
     const group = new THREE.Group();
     const { width, height, length } = VEHICLES[kind];
-    const base = player ? -0.78 : 0;
+    const base = 0;
     this.box(width, 0.55, length, paint, 0, base + 0.75, 0, group);
     if (kind === 'truck') {
       this.box(width, height - 0.7, length * 0.67, 0xd8c7aa, 0, base + 0.7 + (height - 0.7) / 2, 1.0, group);
@@ -184,16 +179,6 @@ export class World {
       group.add(wheel);
       const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.23, 8).rotateZ(Math.PI / 2), this.material(0x9ba5a3, 0.5));
       hub.position.copy(wheel.position); group.add(hub);
-    }
-    if (player) {
-      this.box(width + 0.14, 0.075, 0.4, 0x344e50, 0, base + 1.2, 1.62, group);
-      for (const side of [-1, 1]) this.box(0.08, 0.28, 0.1, 0x344e50, side * 0.65, base + 1.07, 1.62, group);
-      this.box(0.29, 0.02, 1.2, 0xb8d77a, 0, base + 1.04, -1.2, group);
-      this.box(0.36, 0.12, 0.03, 0xe7ecd9, 0, base + 0.62, length / 2 + 0.08, group);
-    }
-    if (player) {
-      const sharedPaint = this.material(paint);
-      group.traverse(object => { if (object instanceof THREE.Mesh && object.material === sharedPaint) object.material = this.playerPaint; });
     }
     group.userData.poolKey = `${kind}:${paint}`;
     return group;
@@ -241,7 +226,7 @@ export class World {
     this.reducedMotion = profile.reduceMotion; this.effects.configure(profile.particleLimit);
     this.resize();
   }
-  inspectEffects() { return { ...this.effects.inspect(), reducedMotion: this.reducedMotion, fov: this.camera.fov }; }
+  inspectEffects() { return { ...this.effects.inspect(), jets: this.jets.inspect(), reducedMotion: this.reducedMotion, fov: this.camera.fov }; }
 
   readonly resize = () => {
     const width = window.innerWidth, height = window.innerHeight;
@@ -250,6 +235,32 @@ export class World {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   };
+
+  private modelFor(id: CarId) {
+    if (!this.modelCache.has(id)) this.modelCache.set(id, createPlayerVehicle(this.playerPaint, id));
+    return this.modelCache.get(id)!;
+  }
+
+  setCar(id: CarId) {
+    if (id === this.currentCar) return;
+    this.carTilt.remove(this.playerModel);
+    this.playerModel = this.modelFor(id); this.carTilt.add(this.playerModel); this.currentCar = id;
+  }
+  get carId() { return this.currentCar; }
+  get ghostCarId() { return this.currentGhost; }
+  setGhostCar(id: CarId) {
+    if (this.currentGhost === id) return;
+    if (!this.ghostModels.has(id)) {
+      // Model geometry is already in car-local coordinates; never bake the current run pose.
+      const pieces = this.modelFor(id).children.map(part => (part as THREE.Mesh).geometry.clone());
+      const silhouette = mergeGeometries(pieces)!; pieces.forEach(piece => piece.dispose());
+      const replay = new THREE.Group();
+      replay.add(new THREE.Mesh(silhouette, this.ghostFill));
+      replay.add(new THREE.LineSegments(new THREE.EdgesGeometry(silhouette), this.ghostOutline));
+      this.ghostModels.set(id, replay);
+    }
+    this.ghost.clear(); this.ghost.add(this.ghostModels.get(id)!); this.currentGhost = id;
+  }
 
   setPaint(color: number) { this.playerPaint.color.setHex(color); }
   get paintColor() { return this.playerPaint.color.getHex(); }
@@ -260,10 +271,11 @@ export class World {
 
   get markerVisible() { return this.landingMarker.visible; }
 
-  resetFeedback() { this.effects.clear(); this.ghost.visible = false; this.trafficHighlight.visible = false; this.pulseAge = 1; this.landingPulse.visible = false; this.landingMarker.visible = false; }
+  resetFeedback() { this.effects.clear(); this.thrusters.clear(); this.jets.update(this.thrusters, 0, this.reducedMotion); this.ghost.visible = false; this.trafficHighlight.visible = false; this.pulseAge = 1; this.landingPulse.visible = false; this.landingMarker.visible = false; }
 
   onEvent(event: GameEvent, sim: Simulation) {
     this.effects.onEvent(event, sim);
+    this.thrusters.onEvent(event);
     if (!event.landing) return;
     this.pulseAge = 0; this.pulseDistance = sim.distance;
     this.landingPulse.position.set(sim.x, 0.045, 3);
@@ -273,7 +285,7 @@ export class World {
 
   // Read-only screen bounds used by development checks for camera/control overlap.
   inspectCarBounds() {
-    const box = new THREE.Box3().setFromObject(this.car);
+    const box = new THREE.Box3().setFromObject(this.playerModel);
     const points: THREE.Vector3[] = [];
     for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
       points.push(new THREE.Vector3(x, y, z).project(this.camera));
@@ -282,7 +294,7 @@ export class World {
       top: (1 - Math.max(...points.map(p => p.y))) / 2, bottom: (1 - Math.min(...points.map(p => p.y))) / 2 };
   }
 
-  render(sim: Simulation, dt: number, time: number, slam = false, threat: TrafficThreat | null = null, ghost: GhostPose | null = null) {
+  render(sim: Simulation, dt: number, _time: number, slam = false, threat: TrafficThreat | null = null, ghost: GhostPose | null = null) {
     const distance = sim.distance;
     for (let i = 0; i < 126; i++) {
       this.dummy.position.set([-3.5, 0, 3.5][i % 3], 0.018, 20 - Math.floor(i / 3) * 12 + distance % 12);
@@ -305,7 +317,7 @@ export class World {
     this.roadsideSigns.forEach((sign, i) => { sign.position.z = 35 - i * 130 + distance % 130; });
 
     this.car.position.set(sim.x, sim.height + 0.78, 3);
-    this.carTilt.rotation.set(sim.pitch, -(LANES[sim.lane] - sim.x) * 0.075, sim.roll);
+    vehicleRotation(sim, this.carTilt.rotation);
     const ghostGap = ghost ? ghost.distance - sim.distance : 0;
     this.ghost.visible = !!ghost && ghostGap > -10 && ghostGap < 220;
     if (ghost) {
@@ -313,10 +325,8 @@ export class World {
       this.ghost.rotation.set(ghost.pitch, 0, ghost.roll);
       this.ghostFill.opacity = Math.abs(ghostGap) < 3 && Math.abs(ghost.x - sim.x) < 1.5 ? 0.035 : 0.12;
     }
-    const on = sim.phase === 'playing' && (sim.thrustActive || sim.boostActive);
-    this.flameLeft.visible = on; this.flameRight.visible = on;
-    const length = 0.9 + (this.reducedMotion ? 0 : Math.sin(time * 41) * 0.12) + (sim.boostActive ? 0.65 : 0);
-    this.flameLeft.scale.set(1, 1, length); this.flameRight.scale.set(1, 1, length);
+    this.thrusters.update(sim, dt);
+    this.jets.update(this.thrusters, sim.height, this.reducedMotion);
     this.shadow.position.x = sim.x; this.shadow.position.z = 3;
     this.shadow.scale.setScalar(1 + sim.height * 0.04);
     (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.28 / (1 + sim.height * 0.17);
@@ -330,7 +340,7 @@ export class World {
     this.landingPulse.scale.set(1.4 + this.pulseAge * 4, 2.5 + this.pulseAge * 5, 1);
     this.landingPulse.material.opacity = Math.max(0, 0.8 * (1 - this.pulseAge / 0.55));
 
-    this.effects.update(sim, dt);
+    this.effects.update(sim, dt, this.thrusters);
 
     const active = new Set(sim.traffic.map(v => v.id));
     for (const [id, model] of this.trafficModels) {

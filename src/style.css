@@ -422,3 +422,27 @@ h2 { font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif; font-s
   .garage-dialog #garage-status { grid-column: 1; grid-row: 6; margin: 0; align-self: center; }
   #garage-done { grid-column: 2; grid-row: 6; width: auto; min-height: 44px; padding: 8px 10px; font-size: 10px; gap: 10px; }
 }
+
+/* Vehicle collection: two categories keep the phone garage easy to browse. */
+.garage-shop { min-width: 0; }
+.garage-tabs { display: flex; gap: 8px; margin: 12px 0; }
+.garage-tabs button { flex: 1; min-height: 44px; border: 1px solid #d5e6d54a; border-radius: 6px; background: #173332; font-size: 12px; }
+.garage-tabs button[aria-pressed='true'] { border-color: var(--acid); color: var(--acid); background: #d6ff7814; }
+.garage-tabs span { margin-left: 7px; opacity: .7; font-size: 10px; }
+.car-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.car-card { display: flex; flex-direction: column; }
+.car-card .paint-preview { height: 58px; }
+.car-role { color: #b9d69d; font-size: 7px; letter-spacing: .7px; margin-top: 5px; }
+.car-card h3 { font-size: 14px; margin: 5px 0; }
+.garage-dialog .car-description { font-size: 10px; line-height: 1.5; margin: 0 0 8px; color: #d0dec9; flex: 1; }
+.garage-dialog .car-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 12px; }
+.garage-dialog .car-stats > div { display: block; grid-template-columns: none; border: 0; padding: 0; }
+.garage-dialog .car-stats dt { font-size: 7px; color: #b5c5ae; letter-spacing: .5px; }
+.garage-dialog .car-stats dd { margin: 3px 0 0; font-size: 10px; color: #eef5e9; }
+.garage-dialog .garage-spec-note { font-size: 10px; line-height: 1.5; color: #c4d3bd; margin: 12px 0 0; }
+#car-grid[hidden], #paint-grid[hidden], #garage-spec-note[hidden] { display: none; }
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+  .garage-shop { grid-column: 1 / -1; grid-row: 3; }
+  .car-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .garage-tabs { margin-top: 0; }
+}

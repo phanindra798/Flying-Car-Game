@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.0 — Seven-car garage and directional jets — 2026-10-27
+
+- Replaced the starter with an original angular metallic pickup and matching garage preview.
+- Added four downward lift jets and two rear boost jets, a brief tap-jump pulse, rotating exhaust trails and steady reduced-effects cues.
+- Added six unlockable original car models: Rally X, Retro Volt, Dune Runner, Apex GT, Night V8 and Aero Pulse.
+- Added different road/boost speed, steering response, jump impulse, lift power, energy consumption/recharge and stunt rotation timing for each car.
+- Added Cars/Paints garage categories with prices, performance comparisons and saved selection. Selecting another car mid-run takes effect on the next run.
+- Migrated existing career saves while preserving credits, paints and challenges. The Vector Pickup remains the free starter with original handling.
+- Recorded vehicle identity in new distance ghosts and replayed the matching car model; legacy pickup ghosts remain compatible.
+- Kept the seven models in bounded lazy caches, maintained shared paint behaviour and adjusted flight advisories for each vehicle's lift power.
+- Scoped test discovery to current source, excluding private old publication drafts. Added directional-thruster and vehicle/progression verification.
+
+
 ## v0.2.0 — Complete current prototype
 
 The second published release consolidates the existing internal development milestones through v0.6 into one update. It follows v0.1.0 without rewriting its commit or tag. Future public releases continue with v0.3.0, v0.4.0 and onward.

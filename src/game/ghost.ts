@@ -1,3 +1,4 @@
+import { isCarId, type CarId } from './garage-cars';
 import type { Simulation } from './simulation';
 
 // Change the course key whenever traffic, movement or road rules invalidate old runs.
@@ -8,7 +9,7 @@ export const MAX_GHOST_FRAMES = 6002;
 const MAX_BYTES = 700_000;
 // Time, distance, lane position, altitude, pitch, roll; sampled at 10 Hz.
 export type GhostFrame = [number, number, number, number, number, number];
-export interface GhostRun { version: 1; course: string; frames: GhostFrame[] }
+export interface GhostRun { version: 1; course: string; carId?: CarId; frames: GhostFrame[] }
 export interface GhostPose { distance: number; x: number; height: number; pitch: number; roll: number }
 const rounded = (n: number) => Math.round(n * 1000) / 1000;
 export const ghostDistance = (run: GhostRun) => run.frames[run.frames.length - 1][1];
@@ -20,22 +21,23 @@ export function parseGhost(raw: string | null): GhostRun | null {
     const run = JSON.parse(raw);
     if (run?.version !== 1 || run.course !== GHOST_COURSE || !Array.isArray(run.frames)
       || run.frames.length < 2 || run.frames.length > MAX_GHOST_FRAMES) return null;
+    if (run.carId !== undefined && !isCarId(run.carId)) return null;
     let previous: GhostFrame | undefined;
     for (const frame of run.frames) {
       if (!Array.isArray(frame) || frame.length !== 6 || !frame.every((n: unknown) => typeof n === 'number' && Number.isFinite(n))) return null;
       const [t, distance, x, height, pitch, roll] = frame;
-      if (t < 0 || t > MAX_GHOST_SECONDS || distance < 0 || distance > MAX_GHOST_SECONDS * 50
+      if (t < 0 || t > MAX_GHOST_SECONDS || distance < 0 || distance > MAX_GHOST_SECONDS * 60
         || Math.abs(x) > 5.251 || height < 0 || height > 9.001 || Math.abs(pitch) > 6.284 || Math.abs(roll) > 6.284) return null;
       if (!previous) {
         if (t !== 0 || distance !== 0 || x !== -1.75 || height !== 0 || pitch !== 0 || roll !== 0) return null;
       } else {
         const dt = t - previous[0];
-        if (dt <= 0 || dt > 0.102 || distance < previous[1] || distance - previous[1] > dt * 51 + 0.02) return null;
+        if (dt <= 0 || dt > 0.102 || distance < previous[1] || distance - previous[1] > dt * 60 + 0.02) return null;
       }
       previous = frame as GhostFrame;
     }
     if (previous![0] < 1) return null;
-    return { version: 1, course: GHOST_COURSE, frames: run.frames };
+    return { version: 1, course: GHOST_COURSE, ...(run.carId ? { carId: run.carId } : {}), frames: run.frames };
   } catch { return null; }
 }
 
@@ -59,7 +61,7 @@ export class GhostRecorder {
   finish(sim: Simulation): GhostRun | null {
     if (!this.enabled || this.overflow || sim.mode !== 'run' || sim.phase !== 'crashed' || sim.elapsed < 1) return null;
     this.capture(sim, true);
-    return this.overflow ? null : { version: 1, course: GHOST_COURSE, frames: this.frames.slice() };
+    return this.overflow ? null : { version: 1, course: GHOST_COURSE, carId: sim.carId, frames: this.frames.slice() };
   }
 }
 

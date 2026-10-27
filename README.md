@@ -2,7 +2,7 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current release: v0.2.0 — the complete current prototype.** This second published release brings together the improvements developed across the earlier internal milestones through v0.6. The published sequence is v0.1.0, v0.2.0, then v0.3.0 for the next set of improvements. Existing browser-save formats stay compatible with the same gameplay rules.
+**Current version: v0.3.0 — seven-car garage and directional jets.** This update adds six unlockable vehicles with different driving and flight characteristics, an angular starter pickup, and separate lift and boost exhaust. It follows v0.2.0, which consolidated the earlier internal milestones through v0.6. Existing credits, paints, challenges and compatible pickup ghosts carry forward.
 
 ## Local development
 
@@ -78,7 +78,9 @@ Open the sliders button beside the sound control to change graphics. Opening set
 
 The actual pixel ratio never exceeds the screen density. Desktop Balanced and Quality caps are 1.5 and 2.0. Quality changes resolution and cosmetic particle density, without changing physics, traffic, scoring or replay timing. It does not promise a particular frame rate or battery improvement.
 
-Boost and powered flight leave brief exhaust trails. Clean landings, other landings and crashes produce distinct bursts using one pooled, instanced draw call. Effects freeze on pause, expire naturally and reset between runs. The **Reduce effects** switch removes particles, landing pulses and boost camera widening; the operating system's reduced-motion preference also enables this, including changes made while the page is open. Essential traffic warnings, altitude guidance and car movement remain.
+Four cyan underbody jets fire downward when jumping or holding powered flight. A quick tap still produces a short launch burst. Two lime rear jets fire only during forward boost; holding both controls fires both banks. Nozzles and detached exhaust follow the car through flips, rolls and lane changes. The original angular Vector Pickup has a metal body, sloping cab, truck bed and full-width light bars. All seven cars use these jet controls.
+
+Boost and powered flight leave brief exhaust trails. Clean landings, other landings and crashes produce distinct bursts using one pooled, instanced draw call. Effects freeze on pause, expire naturally and reset between runs. The **Reduce effects** switch removes particles, landing pulses and boost camera widening; the operating system's reduced-motion preference also enables this, including changes made while the page is open. Steady, shorter rear jet cues remain with reduced effects; essential traffic warnings, altitude guidance and car movement remain.
 
 **Show frame rate** adds a small FPS counter during play, based on rendered animation frames over about a second. Use it for comparisons on your own phone; headless browser checks are not device performance measurements. Preferences save on this browser, with session-only fallback when storage is unavailable.
 
@@ -86,7 +88,25 @@ Sound now layers a motor, low engine tone and filtered thruster noise. Clean lan
 
 ## Challenges, run credits and garage
 
-Open **GARAGE** on the home screen, or **Garage & challenges** while paused. The four original paint schemes are cosmetic: handling, flight, collisions and scoring stay identical. Coast Ivory is free; Sunset Ember costs 75 credits, Glacier Blue 160 and After Hours 260. Unlocking a colour equips it immediately, and switching owned colours is free. The cards preview the colours; the chosen paint also appears on the actual player car. Traffic and the cyan replay ghost keep their own colours.
+Open **GARAGE** on the home screen, or **Garage & challenges** while paused. Switch between **Cars** and **Paints**. The four original paint schemes are cosmetic: handling, flight, collisions and scoring stay identical. Coast Ivory is free; Sunset Ember costs 75 credits, Glacier Blue 160 and After Hours 260. Unlocking a colour equips it immediately, and switching owned colours is free. The cards preview the selected car in each colour; the chosen paint also appears on the actual player car. Traffic and the cyan replay ghost keep their own colours.
+
+The Vector Pickup is the free starter and retains the original driving settings. Six unlockable models have distinct original shapes and performance trade-offs:
+
+| Vehicle | Credits | Strength | Trade-off | Initial boost target | Powered lift budget |
+| --- | ---: | --- | --- | ---: | ---: |
+| Vector Pickup | Free | Balanced driving and flight | No specialist advantage | 137 km/h | 3.2 s |
+| Rally X | 120 | Fast lane changes and rotations | Lower road speed | 130 km/h | 3.1 s |
+| Retro Volt | 220 | Efficient boost and quick recharge | Slower steering and rotations | 137 km/h | 3.6 s |
+| Dune Runner | 300 | Highest jump and strong lift | Lowest road speed | 122 km/h | 2.9 s |
+| Apex GT | 400 | Fastest road speed | Low jump and short flight | 166 km/h | 2.5 s |
+| Night V8 | 480 | Strong forward boost | Heavy steering and high boost drain | 162 km/h | 3.0 s |
+| Aero Pulse | 600 | Longest powered flight and fastest flips | Modest road speed and slow recharge | 130 km/h | 4.7 s |
+
+Speeds are boost targets at the start of a run; difficulty adds speed over time. Flight figures represent the energy available for lift after a jump from a full charge, with no simultaneous boost. They do not include the subsequent unpowered fall. All cars retain the same collision envelope, 9 m flight ceiling, controls, scoring and traffic rules. Prices and performance are initial tuning values for playtesting.
+
+Unlocking a car selects it. Selecting an owned car is free. Selection during an active or paused run applies to the next run or restart, preserving the current car's physics and replay. Paint can change immediately. Driving school always uses the starter pickup; the selected garage car remains available for ordinary practice and scored runs. Purchases use the same earned wallet as paints.
+
+New ghosts record the vehicle used and replay its matching silhouette. The longest completed distance record spans all cars, and its car name appears on the home screen; it is not a separate record per vehicle. Existing pickup ghosts remain readable because the starter's physics and the course rules are unchanged. Replay speed validation accommodates the faster cars.
 
 Each scored run takes the next challenge at its start. Reach the target within that run, then finish the run in a crash to claim it. The small HUD line tracks the target; a completed target stays pending until the results screen. A run can finish at most one challenge, and each challenge bonus is claimed only once. Unfinished challenge progress resets on the next run. These are six sequential goals, not date-based challenges:
 
@@ -101,7 +121,7 @@ Each scored run takes the next challenge at its start. Reach the target within t
 
 Every finished scored run earns **1 credit per full 20 metres**, **8 per cleanly landed stunt**, and **2 per close call**, plus its challenge bonus. The results screen breaks down these rewards. Base rewards continue after all six challenges. Credits are in-game points with no real-money purchases. The wallet is capped at 999,999 credits. Practice, driving school, returning to the menu and restarting an unfinished run award no credits or challenge bonuses.
 
-The wallet, owned colours, equipped colour and completed challenges save together under `boostline.progress.v1` in localStorage. They belong to the current browser and origin; another address, port or device has its own progress. There is no account sync. Bad or unsupported saved data is recovered safely. If browser storage is blocked or full, progress and purchases work for the current session, with a visible message; reloading may lose changes that could not be saved. These local saves are not tamper-proof competitive records.
+The wallet, owned colours, equipped colour, owned vehicles, selected vehicle and completed challenges save together under `boostline.progress.v1` in localStorage. They belong to the current browser and origin; another address, port or device has its own progress. There is no account sync. The profile payload is now version 2; version 1 saves migrate with their credits, paints and completed challenges intact and the Vector Pickup selected. The storage key stays the same. Unknown or unowned car selections fall back to the starter. Bad or unsupported saved data is recovered safely. If browser storage is blocked or full, progress and purchases work for the current session, with a visible message; reloading may lose changes that could not be saved. These local saves are not tamper-proof competitive records.
 
 ## Current milestone
 
@@ -122,6 +142,9 @@ Online services, verified leaderboards, shareable replays and daily challenges a
 ```mermaid
 flowchart LR
     Input[Keyboard, touch and swipe] --> Sim[Fixed-step simulation]
+    Cars[Vehicle catalogue and tuning] --> Sim
+    Cars --> Garage
+    Cars --> World
     Sim --> World[Three.js world, camera and effects]
     Sim --> Audio[Engine and event sounds]
     Sim --> HUD[HUD and menus]
@@ -143,7 +166,7 @@ The simulation runs independently of the renderer so movement, collisions, traff
 
 ## Verification
 
-The v0.2.0 release passes **54 automated tests** across six test files, plus TypeScript checking and the production build. Tests cover core movement/scoring, input and lessons, traffic/collision rules, ghost replay, effects/settings/audio calculations, and progression/purchases. Physical-phone testing remains separate from browser emulation.
+The v0.3.0 release passes **67 automated tests** across eight test files, plus TypeScript checking and the production build. Tests cover core movement/scoring, input and lessons, traffic/collision rules, ghost replay, effects/settings/audio calculations, progression/purchases, directional jets, seven model envelopes, vehicle tuning, and profile migration. Browser checks cover actual multi-touch jet firing, garage purchases, run selection boundaries and replay models. Physical-phone testing remains separate from browser emulation.
 
 ## Structure
 
@@ -152,7 +175,12 @@ The v0.2.0 release passes **54 automated tests** across six test files, plus Typ
 - `src/game/traffic.ts`: seeded traffic rows and spacing.
 - `src/game/traffic-warning.ts`: approaching-traffic advisory.
 - `src/game/ghost.ts`: bounded replay recording, validation, interpolation and distance-record selection.
-- `src/game/world.ts`: Three.js scene, procedural assets and camera.
+- `src/game/world.ts`: Three.js scene, camera and bounded player/ghost model caches.
+- `src/game/garage-cars.ts`: seven vehicle definitions, prices, tuning and UI silhouettes.
+- `src/game/player-vehicle.ts`: seven procedural 3D bodies, each batched by material.
+- `src/game/thrusters.ts`: independent launch/lift and rear boost visuals.
+- `src/game/garage-cars.test.ts`: migration, car purchases, run tuning, model bounds and replay compatibility.
+- `src/game/thrusters.test.ts`: jet direction, launch pulse, pause/reset and particle limits.
 - `src/game/audio.ts`: layered synthesized engine/thruster sound and landing/impact cues.
 - `src/game/effects.ts`: fixed particle pool for exhaust trails and event bursts.
 - `src/game/settings.ts`: validated graphics preferences and per-device render budgets.

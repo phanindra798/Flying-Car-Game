@@ -1,5 +1,6 @@
 import './style.css';
-import { PROGRESS_KEY, PAINTS, CHALLENGES, MAX_CREDITS, parseProfile, usePaint, nextChallenge, RunProgress, type RunReward } from './game/progression';
+import { GARAGE_CARS, getCar, carPreview } from './game/garage-cars';
+import { PROGRESS_KEY, PAINTS, CHALLENGES, MAX_CREDITS, parseProfile, usePaint, useCar, nextChallenge, RunProgress, type RunReward } from './game/progression';
 import { SETTINGS_KEY, parseSettings, type GraphicsSettings, type GraphicsQuality } from './game/settings';
 import { Simulation, FIXED_STEP, type HeldInput, type Mode, type Phase } from './game/simulation';
 import { World } from './game/world';
@@ -20,7 +21,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="#" aria-label="BOOSTLINE home"><span class="brand-mark">B<span>↗</span></span><span>BOOSTLINE<small>FIND YOUR LINE.</small></span></a>
     <div class="route-badge"><span class="live-dot"></span> PACIFIC COAST <span class="route-number">/ 01</span></div>
-    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.2</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
+    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.3</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
   </header>
 
   <main>
@@ -68,8 +69,13 @@ app.innerHTML = `
       <div class="garage-title-row"><h2 id="garage-title">Make it yours.</h2><strong id="garage-balance" aria-label="Credit balance">0 CR</strong></div>
       <section class="garage-challenge" aria-labelledby="challenge-title"><span id="challenge-count" class="eyebrow"></span><h3 id="challenge-title"></h3><p id="challenge-detail"></p><div class="challenge-track" id="challenge-meter" role="progressbar" aria-label="Current challenge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div><div class="challenge-summary"><span id="challenge-progress"></span><strong id="challenge-bonus"></strong></div></section>
       <p class="garage-rules">Earn credits in scored runs. Each run has one challenge; claim rewards when it ends in a crash. Practice and restarts earn nothing.</p>
-      <div id="paint-grid" class="paint-grid">${PAINTS.map(paint => `<article class="paint-card" data-paint-card="${paint.id}" style="--paint:#${paint.color.toString(16).padStart(6, '0')}"><div class="paint-preview" aria-hidden="true"><svg viewBox="0 0 180 62" fill="none"><path d="M20 34 52 29 67 12h48l20 19 26 7v12H20Z" fill="var(--paint)"/><path d="m61 28 12-11h35l13 13Z" fill="#28494c"/><path d="M107 17v12M35 39h108" stroke="#d6ff78" stroke-width="3"/><path d="M148 32h18v4h-18Z" fill="#6b8583"/><circle cx="48" cy="49" r="11" fill="#102829"/><circle cx="134" cy="49" r="11" fill="#102829"/><circle cx="48" cy="49" r="5" fill="#90a6a3"/><circle cx="134" cy="49" r="5" fill="#90a6a3"/></svg></div><h3>${paint.name}</h3><button type="button" data-paint="${paint.id}" aria-label="Use ${paint.name}"></button></article>`).join('')}</div>
-      <p class="paint-note">Colour only · identical handling and power</p><p id="garage-status" role="status" aria-live="polite"></p><button id="garage-done" class="primary-button">Back to the road ${arrow}</button>
+      <div class="garage-shop">
+        <div class="garage-tabs" role="group" aria-label="Garage category"><button type="button" data-garage-view="cars" aria-pressed="true" aria-controls="car-grid">Cars <span>7</span></button><button type="button" data-garage-view="paints" aria-pressed="false" aria-controls="paint-grid">Paints <span>4</span></button></div>
+        <div id="car-grid" class="car-grid" aria-label="Vehicle collection">${GARAGE_CARS.map(car => `<article class="paint-card car-card" data-car-card="${car.id}"><div class="paint-preview">${carPreview(car)}</div><span class="car-role">${car.role}</span><h3>${car.name}</h3><p class="car-description">${car.note}</p><dl class="car-stats"><div><dt>BOOST</dt><dd>${Math.round((car.cruise + car.boost) * 3.6)} km/h</dd></div><div><dt>FLIGHT</dt><dd>${(93 / car.flightDrain).toFixed(1)} s</dd></div><div><dt>JUMP</dt><dd>${car.jumpLabel}</dd></div><div><dt>AGILITY</dt><dd>${car.agility}</dd></div></dl><button type="button" data-car="${car.id}"></button></article>`).join('')}</div>
+      <div id="paint-grid" class="paint-grid" hidden>${PAINTS.map(paint => `<article class="paint-card" data-paint-card="${paint.id}" style="--paint:#${paint.color.toString(16).padStart(6, '0')}"><div class="paint-preview" aria-hidden="true">${carPreview(GARAGE_CARS[0])}</div><h3>${paint.name}</h3><button type="button" data-paint="${paint.id}" aria-label="Use ${paint.name}"></button></article>`).join('')}</div>
+        <p class="garage-spec-note" id="garage-spec-note">Boost speed at run start. Flight is powered lift from a full charge after jumping; using boost also drains energy. Speed rises as a run continues.</p>
+      </div>
+      <p class="paint-note" id="garage-car-note">Choose a car for your next run. Paints change colour only.</p><p id="garage-status" role="status" aria-live="polite"></p><button id="garage-done" class="primary-button">Back to the road ${arrow}</button>
     </dialog>
 
     <dialog id="settings" class="help-dialog settings-dialog" aria-labelledby="settings-title"><div class="help-heading"><span class="eyebrow">MAKE IT YOUR DRIVE</span><button id="settings-close" class="icon-button" aria-label="Close settings">×</button></div><h2 id="settings-title">Find your balance.</h2>
@@ -81,7 +87,7 @@ app.innerHTML = `
       <p id="settings-status" role="status">Changes apply immediately and save on this browser.</p><button id="settings-done" class="primary-button">Done ${arrow}</button>
     </dialog>
 
-    <dialog id="help" class="help-dialog"><div class="help-heading"><span class="eyebrow">THE DRIVER'S GUIDE</span><button id="help-close" class="icon-button" aria-label="Close controls">×</button></div><h2>Learn your moves.</h2><dl><div><dt><kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd></dt><dd>Change lane</dd></div><div><dt><kbd>SPACE</kbd></dt><dd>Jump · hold for upward thrust</dd></div><div><dt><kbd>SHIFT</kbd></dt><dd>Hold to boost forward</dd></div><div><dt><kbd>F</kbd></dt><dd>Front flip while airborne</dd></div><div><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Barrel roll left / right</dd></div><div><dt><kbd>↓</kbd> / <kbd>S</kbd></dt><dd>Slam downward</dd></div><div><dt><kbd>ESC</kbd> / <kbd>P</kbd></dt><dd>Pause / resume</dd></div><div><dt><kbd>R</kbd></dt><dd>Restart current mode</dd></div></dl><p>Land a completed trick to bank points. Energy refills on the road. Practice flight has an empty highway. The cyan ghost replays your longest finished run; you can drive through it. Ghosts are saved on this browser for runs up to 10 minutes. Toggle the ghost on the home or pause screen.</p><button id="help-done" class="primary-button">Got it ${arrow}</button></dialog>
+    <dialog id="help" class="help-dialog"><div class="help-heading"><span class="eyebrow">THE DRIVER'S GUIDE</span><button id="help-close" class="icon-button" aria-label="Close controls">×</button></div><h2>Learn your moves.</h2><dl><div><dt><kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd></dt><dd>Change lane</dd></div><div><dt><kbd>SPACE</kbd></dt><dd>Jump · hold to fire the underbody lift jets</dd></div><div><dt><kbd>SHIFT</kbd></dt><dd>Hold to fire the rear boosters</dd></div><div><dt><kbd>F</kbd></dt><dd>Front flip while airborne</dd></div><div><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Barrel roll left / right</dd></div><div><dt><kbd>↓</kbd> / <kbd>S</kbd></dt><dd>Slam downward</dd></div><div><dt><kbd>ESC</kbd> / <kbd>P</kbd></dt><dd>Pause / resume</dd></div><div><dt><kbd>R</kbd></dt><dd>Restart current mode</dd></div></dl><p>Land a completed trick to bank points. Energy refills on the road. Practice flight has an empty highway. The cyan ghost replays your longest finished run; you can drive through it. Ghosts are saved on this browser for runs up to 10 minutes. Toggle the ghost on the home or pause screen.</p><button id="help-done" class="primary-button">Got it ${arrow}</button></dialog>
   </main>
 
   <footer class="bottom-bar"><button id="garage-open" class="garage-open" data-garage-open>GARAGE <span id="garage-wallet">0 CR</span><span aria-hidden="true">↗</span></button><div class="control-strip"><span><kbd>← →</kbd> STEER</span><span><kbd>SPACE</kbd> FLY</span><span><kbd>F</kbd> FLIP</span><span><kbd>Q E</kbd> ROLL</span><span><kbd>SHIFT</kbd> BOOST</span></div><button id="footer-help" class="footer-help">CONTROLS <span>?</span></button></footer>
@@ -163,7 +169,7 @@ function syncGhostSettings() {
     button.setAttribute('aria-label', 'Show best distance ghost');
   });
   $('ghost-home-copy').textContent = savedGhost
-    ? `Best distance ${number(ghostDistance(savedGhost))} m · ${ghostStored ? 'saved here' : 'this session'}`
+    ? `${getCar(savedGhost.carId ?? 'vector').name} · ${number(ghostDistance(savedGhost))} m · ${ghostStored ? 'saved here' : 'this session'}`
     : 'Finish a run to save a distance ghost.';
 }
 document.querySelectorAll('[data-ghost-toggle]').forEach(button => button.addEventListener('click', () => {
@@ -181,9 +187,11 @@ function clearInput() {
 function focusRoad() { $('scene').querySelector('canvas')?.focus({ preventScroll: true }); }
 
 function start(mode: Mode = 'run', guided = false) {
-  clearInput(); sim.start(mode); noticeTime = 0;
+  clearInput(); sim.start(mode, 42, guided ? 'vector' : profile.selectedCar); noticeTime = 0;
   progression.begin(sim, profile); lastReward = null;
+  world?.setCar(sim.carId);
   recorder.start(sim); raceGhost = mode === 'run' ? savedGhost : null; ghostPose = null;
+  world?.setGhostCar(raceGhost?.carId ?? 'vector');
   if (guided) school.begin(sim); else school.end();
   world?.resetFeedback();
   $('stunt-notice').classList.remove('visible');
@@ -206,7 +214,7 @@ function syncScreens() {
   $('lesson-panel').hidden = !school.active || school.completed || sim.phase !== 'playing';
   $('results').hidden = sim.phase !== 'crashed';
   $('touch-controls').hidden = sim.phase !== 'playing';
-  $('run-label').textContent = school.active ? 'DRIVING SCHOOL' : sim.mode === 'practice' ? 'PRACTICE · EMPTY HIGHWAY' : 'CURRENT RUN';
+  $('run-label').textContent = school.active ? 'DRIVING SCHOOL · VECTOR PICKUP' : `${sim.mode === 'practice' ? 'PRACTICE' : 'RUN'} · ${getCar(sim.carId).name.toUpperCase()}`;
   syncLesson();
   if (sim.phase === 'paused') $(school.completed ? 'school-race' : 'resume').focus();
   if (sim.phase === 'crashed') $('retry').focus();
@@ -220,7 +228,7 @@ function togglePause() {
 }
 
 function home() {
-  clearInput(); progression.cancel(); sim.start(); sim.phase = 'ready'; sim.speed = 0;
+  clearInput(); progression.cancel(); sim.start('run', 42, profile.selectedCar); world?.setCar(profile.selectedCar); sim.phase = 'ready'; sim.speed = 0;
   school.end(); world?.resetFeedback(); ghostPose = null; raceGhost = null; syncGhostSettings();
   $('home-best').textContent = best ? number(best) : 'SET YOUR FIRST RECORD';
   $('stunt-notice').classList.remove('visible'); syncScreens();
@@ -364,6 +372,21 @@ function syncProgression(message = '') {
     button.closest<HTMLElement>('.paint-card')!.dataset.equipped = String(equipped);
   }
   $('garage-status').textContent = `${message ? message + ' ' : ''}${progressStorageCopy()}`;
+  for (const car of GARAGE_CARS) {
+    const button = document.querySelector<HTMLButtonElement>(`[data-car="${car.id}"]`)!;
+    const owned = profile.cars.includes(car.id), selected = profile.selectedCar === car.id;
+    button.textContent = selected ? 'Selected ✓' : owned ? 'Select car' : `Unlock · ${car.price} CR`;
+    button.disabled = !owned && profile.credits < car.price;
+    button.setAttribute('aria-label', `${selected ? 'Selected' : owned ? 'Select' : 'Unlock'} ${car.name}${owned ? '' : ` for ${car.price} credits`}`);
+    button.setAttribute('aria-pressed', String(selected)); button.closest<HTMLElement>('.car-card')!.dataset.equipped = String(selected);
+  }
+  const selectedCar = getCar(profile.selectedCar);
+  const running = sim.phase === 'playing' || sim.phase === 'paused';
+  $('garage-car-note').textContent = running
+    ? `Driving ${getCar(sim.carId).name}. ${selectedCar.name} selected for the next run.`
+    : `${selectedCar.name} selected · Paints change colour only. Driving school uses the starter pickup.`;
+  document.querySelectorAll('#paint-grid .paint-preview').forEach(preview => preview.innerHTML = carPreview(selectedCar));
+  if (!running) world?.setCar(profile.selectedCar);
   world?.setPaint(PAINTS.find(paint => paint.id === profile.equipped)!.color);
 }
 document.querySelectorAll('[data-garage-open]').forEach(button => button.addEventListener('click', () => {
@@ -375,6 +398,19 @@ for (const id of ['garage-close', 'garage-done']) $(id).addEventListener('click'
 garageDialog.addEventListener('close', () => {
   if (resumeAfterGarage && sim.phase === 'paused' && !document.hidden) togglePause();
   resumeAfterGarage = false;
+});
+document.querySelectorAll<HTMLButtonElement>('[data-garage-view]').forEach(button => button.addEventListener('click', () => {
+  const cars = button.dataset.garageView === 'cars';
+  $('car-grid').hidden = !cars; $('paint-grid').hidden = cars; $('garage-spec-note').hidden = !cars;
+  document.querySelectorAll<HTMLButtonElement>('[data-garage-view]').forEach(tab => tab.setAttribute('aria-pressed', String(tab === button)));
+}));
+$('car-grid').addEventListener('click', event => {
+  const button = (event.target as Element).closest<HTMLButtonElement>('[data-car]');
+  if (!button || button.disabled) return;
+  const result = useCar(profile, button.dataset.car!);
+  if (result.outcome === 'invalid' || result.outcome === 'insufficient') return;
+  profile = result.profile; saveProgress();
+  syncProgression(`${getCar(profile.selectedCar).name} ${result.outcome === 'unlocked' ? 'unlocked.' : 'selected.'}`);
 });
 $('paint-grid').addEventListener('click', event => {
   const button = (event.target as Element).closest<HTMLButtonElement>('[data-paint]');
@@ -587,7 +623,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('qa')) {
       elapsed: sim.elapsed, ghostEnabled, ghostAvailable: !!savedGhost, ghostVisible: world?.ghostVisible,
       ghostPose, ghostDuration: raceGhost ? ghostDuration(raceGhost) : null,
       activePointers: touchPointers.size, pixelRatio: world?.renderer.getPixelRatio(), carBounds: world?.inspectCarBounds(),
-      profile: { ...profile, owned: [...profile.owned] }, challenge: progression.status(sim), lastReward, progressStored, paintColor: world?.paintColor,
+      carId: sim.carId, renderedCar: world?.carId, ghostCar: world?.ghostCarId, speed: sim.speed, profile: { ...profile, owned: [...profile.owned], cars: [...profile.cars] }, challenge: progression.status(sim), lastReward, progressStored, paintColor: world?.paintColor,
       graphics, effects: world?.inspectEffects(), audio: audio.inspect(), fps,
       renderCalls: world?.renderer.info.render.calls, geometries: world?.renderer.info.memory.geometries }),
   } });

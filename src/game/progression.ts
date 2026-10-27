@@ -1,3 +1,4 @@
+import { GARAGE_CARS, isCarId, type CarId } from './garage-cars';
 import type { GameEvent, Simulation } from './simulation';
 
 export const PROGRESS_KEY = 'boostline.progress.v1';
@@ -9,7 +10,7 @@ export const PAINTS = [
   { id: 'violet', name: 'After Hours', color: 0xb19af2, price: 260 },
 ] as const;
 export type PaintId = typeof PAINTS[number]['id'];
-export type Profile = { version: 1; credits: number; owned: PaintId[]; equipped: PaintId; completed: number };
+export type Profile = { version: 2; credits: number; owned: PaintId[]; equipped: PaintId; completed: number; cars: CarId[]; selectedCar: CarId };
 export const CHALLENGES = [
   { title: 'Stick the landing', short: 'CLEAN STUNTS', detail: 'Land 1 completed flip or roll cleanly.', metric: 'tricks', target: 1, bonus: 60 },
   { title: 'Coast explorer', short: 'DISTANCE', detail: 'Travel 400 metres in one run.', metric: 'distance', target: 400, bonus: 90 },
@@ -23,7 +24,7 @@ export type ChallengeStatus = { challenge: Challenge; index: number; value: numb
 export type RunReward = { profile: Profile; earned: number; distance: number; stunts: number; closeCalls: number; bonus: number; challenge: Challenge | null };
 
 export function freshProfile(): Profile {
-  return { version: 1, credits: 0, owned: ['ivory'], equipped: 'ivory', completed: 0 };
+  return { version: 2, credits: 0, owned: ['ivory'], equipped: 'ivory', completed: 0, cars: ['vector'], selectedCar: 'vector' };
 }
 const isPaint = (id: unknown): id is PaintId => PAINTS.some(paint => paint.id === id);
 const integer = (value: unknown, max: number): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= max;
@@ -34,10 +35,12 @@ export function parseProfile(raw: string | null): Profile {
     const data: unknown = JSON.parse(raw);
     if (!data || typeof data !== 'object') return freshProfile();
     const p = data as Record<string, unknown>;
-    if (p.version !== 1 || !integer(p.credits, MAX_CREDITS) || !integer(p.completed, CHALLENGES.length) || !Array.isArray(p.owned) || p.owned.length > 64) return freshProfile();
+    if ((p.version !== 1 && p.version !== 2) || !integer(p.credits, MAX_CREDITS) || !integer(p.completed, CHALLENGES.length) || !Array.isArray(p.owned) || p.owned.length > 64) return freshProfile();
     const owned = [...new Set<PaintId>(['ivory', ...p.owned.filter(isPaint)])];
     const equipped = isPaint(p.equipped) && owned.includes(p.equipped) ? p.equipped : 'ivory';
-    return { version: 1, credits: p.credits, owned, equipped, completed: p.completed };
+    const cars = [...new Set<CarId>(['vector', ...(p.version === 2 && Array.isArray(p.cars) && p.cars.length <= 64 ? p.cars.filter(isCarId) : [])])];
+    const selectedCar = p.version === 2 && isCarId(p.selectedCar) && cars.includes(p.selectedCar) ? p.selectedCar : 'vector';
+    return { version: 2, credits: p.credits, owned, equipped, completed: p.completed, cars, selectedCar };
   } catch { return freshProfile(); }
 }
 
@@ -47,6 +50,14 @@ export function usePaint(profile: Profile, id: string): { profile: Profile; outc
   if (profile.owned.includes(paint.id)) return { profile: { ...profile, equipped: paint.id }, outcome: 'equipped' };
   if (profile.credits < paint.price) return { profile, outcome: 'insufficient' };
   return { profile: { ...profile, credits: profile.credits - paint.price, equipped: paint.id, owned: [...profile.owned, paint.id] }, outcome: 'unlocked' };
+}
+
+export function useCar(profile: Profile, id: string): { profile: Profile; outcome: 'unlocked' | 'equipped' | 'insufficient' | 'invalid' } {
+  const car = GARAGE_CARS.find(candidate => candidate.id === id);
+  if (!car) return { profile, outcome: 'invalid' };
+  if (profile.cars.includes(car.id)) return { profile: { ...profile, selectedCar: car.id }, outcome: 'equipped' };
+  if (profile.credits < car.price) return { profile, outcome: 'insufficient' };
+  return { profile: { ...profile, credits: profile.credits - car.price, selectedCar: car.id, cars: [...profile.cars, car.id] }, outcome: 'unlocked' };
 }
 
 export function nextChallenge(profile: Profile): ChallengeStatus | null {

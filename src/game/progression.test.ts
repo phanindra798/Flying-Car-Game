@@ -14,10 +14,10 @@ describe('local career and garage', () => {
   it('loads bounded data and repairs unknown, duplicate and unowned paints', () => {
     const stored = { ...freshProfile(), credits: 193, completed: 2, owned: ['ember', 'ember', 'unknown'], equipped: 'violet' };
     const restored = parseProfile(JSON.stringify(stored));
-    expect(restored).toEqual({ version: 1, credits: 193, completed: 2, owned: ['ivory', 'ember'], equipped: 'ivory' });
+    expect(restored).toEqual({ ...freshProfile(), credits: 193, completed: 2, owned: ['ivory', 'ember'], equipped: 'ivory' });
     const valid = { ...restored, equipped: 'ember' as const };
     expect(parseProfile(JSON.stringify(valid))).toEqual(valid);
-    for (const raw of [null, '{', 'null', '[]', '0', 'x'.repeat(4097), JSON.stringify({ ...stored, version: 2 }), JSON.stringify({ ...stored, credits: -1 }), JSON.stringify({ ...stored, credits: 1.5 }), JSON.stringify({ ...stored, credits: MAX_CREDITS + 1 }), JSON.stringify({ ...stored, completed: 7 }), JSON.stringify({ ...stored, owned: Array(65).fill('ivory') })]) expect(parseProfile(raw)).toEqual(freshProfile());
+    for (const raw of [null, '{', 'null', '[]', '0', 'x'.repeat(4097), JSON.stringify({ ...stored, version: 3 }), JSON.stringify({ ...stored, credits: -1 }), JSON.stringify({ ...stored, credits: 1.5 }), JSON.stringify({ ...stored, credits: MAX_CREDITS + 1 }), JSON.stringify({ ...stored, completed: 7 }), JSON.stringify({ ...stored, owned: Array(65).fill('ivory') })]) expect(parseProfile(raw)).toEqual(freshProfile());
   });
   it('rejects unaffordable/unknown purchases without mutating the wallet', () => {
     const profile = freshProfile(), before = JSON.stringify(profile);
