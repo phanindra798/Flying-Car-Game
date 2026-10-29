@@ -446,3 +446,64 @@ h2 { font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif; font-s
   .car-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .garage-tabs { margin-top: 0; }
 }
+
+/* Starting collection: arrow browsing, true 3D previews and explicit unlock state. */
+#app[data-phase='ready'] .briefing { display: none; }
+.welcome { top: 128px; bottom: 105px; left: 6%; right: 6%; width: auto; max-width: 1180px; margin: auto; display: grid; grid-template-columns: .9fr 1.1fr; gap: 8px 48px; align-content: center; overflow-y: auto; padding: 10px 4px; }
+.welcome > :not(.car-selector) { grid-column: 1; }
+.welcome h1 { font-size: clamp(54px,6.8vw,96px); margin: 12px 0; }
+.welcome .hero-description { margin: 0 0 10px; }
+.welcome .personal-best { margin-top: 12px; padding-top: 12px; width: 100%; }
+.welcome .learn-button { margin-top: 0; }
+.car-selector { grid-column: 2; grid-row: 1 / 8; align-self: center; min-width: 0; border: 1px solid #b2d6cb50; border-radius: 16px; background: linear-gradient(145deg,#17393ef2,#10292df2); padding: 14px; box-shadow: 0 18px 48px #081e2440; }
+.car-selector-heading { display: grid; grid-template-columns: 48px 1fr 48px; gap: 8px; align-items: center; text-align: center; }
+.car-selector-heading button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #c4dfce70; background: #284b4e; color: var(--acid); font-size: 25px; }
+.car-selector-heading button:hover { background: #3d6460; }
+.car-selector-heading h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 30px; font-weight: 600; margin: 2px 0; line-height: 1; }
+#car-position, #starting-car-role { font-size: 8px; letter-spacing: 1.2px; color: #bbd1c5; }
+#starting-car-role { color: var(--acid); }
+#car-showcase { width: 100%; height: 265px; }
+#car-showcase canvas, #car-showcase svg { display: block; width: 100%; height: 100%; }
+.starting-car-stats { font-size: 11px; line-height: 1.5; text-align: center; color: #d2e3d9; margin: 3px 0 10px; }
+.starting-car-footer { display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 22px; }
+#starting-car-state { font-size: 10px; color: #c4d7c9; }
+#starting-car-unlock { min-height: 44px; padding: 8px 14px; border: 1px solid #d6ff7870; border-radius: 6px; background: #d6ff7820; color: var(--acid); font-size: 11px; }
+@media (max-width: 720px) and (orientation: portrait) {
+  .welcome { top: calc(79px + env(safe-area-inset-top)); bottom: calc(75px + env(safe-area-inset-bottom)); left: 18px; right: 18px; display: flex; flex-direction: column; gap: 8px; align-content: initial; padding: 6px 2px 16px; }
+  .welcome > .eyebrow, .welcome .hero-description { display: none; }
+  .welcome h1 { font-size: 43px; margin: 0 0 4px; flex: none; }
+  .car-selector { width: 100%; padding: 10px; flex: none; }
+  #car-showcase { height: 180px; }
+  .car-selector-heading h2 { font-size: 26px; }
+  .starting-car-stats { font-size: 9px; }
+  .welcome .start-actions { gap: 15px; flex: none; }
+  .welcome .primary-button { min-height: 46px; padding: 12px 15px; gap: 12px; }
+  .welcome .learn-button { flex: none; }
+  .welcome .ghost-setting { flex: none; }
+  .welcome .personal-best { flex: none; margin-top: 0; padding-top: 10px; }
+}
+@media (max-width: 720px) and (orientation: portrait) and (max-height: 650px) {
+  .welcome { gap: 5px; }
+  .welcome h1 { font-size: 32px; margin: 0; }
+  #car-showcase { height: 120px; }
+  .car-selector { padding: 8px; }
+  .starting-car-stats { margin: 2px 0 5px; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .welcome { top: calc(62px + env(safe-area-inset-top)); bottom: calc(58px + env(safe-area-inset-bottom)); left: 18px; right: 18px; grid-template-columns: .85fr 1.15fr; gap: 4px 16px; align-content: start; padding: 4px; }
+  .welcome > .eyebrow, .welcome .hero-description, .welcome .personal-best { display: none; }
+  .welcome h1 { font-size: 34px; margin: 0; }
+  .welcome .start-actions { gap: 8px; flex-wrap: wrap; }
+  .welcome .primary-button { padding: 9px 12px; min-height: 44px; font-size: 10px; gap: 10px; }
+  .welcome .text-button { font-size: 10px; min-height: 44px; }
+  .welcome .learn-button { font-size: 9px; min-height: 44px; }
+  .welcome .ghost-setting { flex-wrap: wrap; gap: 3px 8px; }
+  .car-selector { padding: 8px; align-self: start; }
+  .car-selector-heading { grid-template-columns: 44px 1fr 44px; }
+  .car-selector-heading button { height: 44px; width: 44px; }
+  .car-selector-heading h2 { font-size: 22px; }
+  #car-showcase { height: 85px; }
+  .starting-car-stats { font-size: 8px; margin: 0 0 4px; }
+  #starting-car-state { font-size: 9px; }
+  .starting-car-footer { gap: 7px; }
+}

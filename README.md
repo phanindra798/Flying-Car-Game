@@ -2,7 +2,9 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current version: v0.3.0 — seven-car garage and directional jets.** This update adds six unlockable vehicles with different driving and flight characteristics, an angular starter pickup, and separate lift and boost exhaust. It follows v0.2.0, which consolidated the earlier internal milestones through v0.6. Existing credits, paints, challenges and compatible pickup ghosts carry forward.
+**Current version: v0.4.0 — start-screen car selection and redesigned vehicles.** Browse all seven cars with **< / >**, see the actual 3D model, and choose or unlock a car before driving. Vehicle bodies now have distinct proportions, wheel openings, rounded tyres, detailed rims and model-specific lights. These are original stylized models designed for mobile, not photorealistic scanned assets. Existing driving stats, credits, paints, challenges and compatible ghosts carry forward.
+
+This update follows v0.3.0 without changing existing vehicle performance or save formats.
 
 ## Local development
 
@@ -34,6 +36,8 @@ npm run preview
 ```
 
 ## Controls
+
+On the start screen, tap **< / >** or use the keyboard left/right arrows to browse cars. Browsing an owned car selects and saves it immediately. Locked cars show their price and an **Unlock** button; Start and Practice stay disabled until you unlock that car or return to an owned one. The driving lesson always uses the free starter.
 
 On a phone, use the on-screen buttons. Swipe horizontally across the road or tap **← / →** to change lane. Each deliberate swipe changes one lane; swiping vertically does not steer. Tap **JUMP** to jump, then keep holding to fly. Hold **BOOST** for forward speed, tap **FLIP / ROLL LEFT / ROLL RIGHT** while airborne, and hold **SLAM** to descend quickly. You can hold JUMP with one finger while tapping a stunt with another. Release JUMP to fall naturally; energy refills after landing. Use the pause button to resume, restart or return home.
 
@@ -166,7 +170,7 @@ The simulation runs independently of the renderer so movement, collisions, traff
 
 ## Verification
 
-The v0.3.0 release passes **67 automated tests** across eight test files, plus TypeScript checking and the production build. Tests cover core movement/scoring, input and lessons, traffic/collision rules, ghost replay, effects/settings/audio calculations, progression/purchases, directional jets, seven model envelopes, vehicle tuning, and profile migration. Browser checks cover actual multi-touch jet firing, garage purchases, run selection boundaries and replay models. Physical-phone testing remains separate from browser emulation.
+The v0.4.0 build passes **67 automated tests** across eight test files, plus TypeScript checking and the production build. Tests cover core movement/scoring, input and lessons, traffic/collision rules, ghost replay, effects/settings/audio calculations, progression/purchases, directional jets, seven model envelopes, vehicle tuning, and profile migration. Browser checks cover home arrow wrapping, locked-car start guards, one-time unlock charges, saved selections, garage/home synchronization, session-only storage, idle preview rendering and touch targets in four phone layouts. Existing v0.3 checks also cover actual multi-touch jet firing, all garage purchases, run selection boundaries and replay models. Physical-phone testing remains separate from browser emulation.
 
 ## Structure
 
@@ -176,6 +180,7 @@ The v0.3.0 release passes **67 automated tests** across eight test files, plus T
 - `src/game/traffic-warning.ts`: approaching-traffic advisory.
 - `src/game/ghost.ts`: bounded replay recording, validation, interpolation and distance-record selection.
 - `src/game/world.ts`: Three.js scene, camera and bounded player/ghost model caches.
+- `src/game/car-showcase.ts`: on-demand 3D start-screen preview, lighting and bounded model cache.
 - `src/game/garage-cars.ts`: seven vehicle definitions, prices, tuning and UI silhouettes.
 - `src/game/player-vehicle.ts`: seven procedural 3D bodies, each batched by material.
 - `src/game/thrusters.ts`: independent launch/lift and rear boost visuals.
@@ -198,6 +203,6 @@ The v0.3.0 release passes **67 automated tests** across eight test files, plus T
 
 ## Data and assets
 
-Models are generated in code. No external game assets or reference-video footage are included. Barlow Condensed and DM Sans are bundled locally through Fontsource, with system-font fallbacks. Best score, distance ghost, ghost visibility, graphics preferences, sound preference, tutorial completion and career/garage progress use localStorage; no data is sent to a game backend.
+Models are generated in code. The start-screen showroom redraws only when the car, paint or size changes, caps pixel ratio at 1.5 and lazily caches up to seven models. It uses a second WebGL context and falls back to a static silhouette if that context cannot be created. No external game assets or reference-video footage are included. Barlow Condensed and DM Sans are bundled locally through Fontsource, with system-font fallbacks. Best score, distance ghost, ghost visibility, graphics preferences, sound preference, tutorial completion and career/garage progress use localStorage; no data is sent to a game backend.
 
 The `.local/` directory is intentionally ignored by Git, blocked by the Vite development server and absent from the build output. It is reserved for personal notes and local verification artifacts. Do not force-add its contents or copy it into `public/`.

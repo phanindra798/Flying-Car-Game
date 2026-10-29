@@ -1,5 +1,6 @@
 import './style.css';
-import { GARAGE_CARS, getCar, carPreview } from './game/garage-cars';
+import { CarShowcase } from './game/car-showcase';
+import { GARAGE_CARS, getCar, carPreview, type CarId } from './game/garage-cars';
 import { PROGRESS_KEY, PAINTS, CHALLENGES, MAX_CREDITS, parseProfile, usePaint, useCar, nextChallenge, RunProgress, type RunReward } from './game/progression';
 import { SETTINGS_KEY, parseSettings, type GraphicsSettings, type GraphicsQuality } from './game/settings';
 import { Simulation, FIXED_STEP, type HeldInput, type Mode, type Phase } from './game/simulation';
@@ -21,14 +22,20 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="#" aria-label="BOOSTLINE home"><span class="brand-mark">B<span>↗</span></span><span>BOOSTLINE<small>FIND YOUR LINE.</small></span></a>
     <div class="route-badge"><span class="live-dot"></span> PACIFIC COAST <span class="route-number">/ 01</span></div>
-    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.3</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
+    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.4</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
   </header>
 
   <main>
     <section id="welcome" class="welcome" aria-labelledby="hero-title">
       <div class="eyebrow"><span class="small-rule"></span> AN ARCADE HIGHWAY STUNT RUNNER</div>
-      <h1 id="hero-title">Take the<br><em>high road.</em></h1>
+      <h1 id="hero-title">Take the <em>high road.</em></h1>
       <p class="hero-description">A little speed. A little altitude.<br>Find your way through the traffic.</p>
+      <section class="car-selector" aria-label="Choose your starting car">
+        <div class="car-selector-heading"><button id="car-previous" type="button" aria-label="Previous car">&lt;</button><div aria-live="polite" aria-atomic="true"><span id="car-position">01 / 07</span><h2 id="starting-car-name">Vector Pickup</h2><span id="starting-car-role">ALL-ROUNDER</span></div><button id="car-next" type="button" aria-label="Next car">&gt;</button></div>
+        <div id="car-showcase"></div>
+        <p id="starting-car-stats" class="starting-car-stats"></p>
+        <div class="starting-car-footer"><span id="starting-car-state" role="status"></span><button id="starting-car-unlock" type="button" hidden></button></div>
+      </section>
       <div class="start-actions"><button id="start" class="primary-button">Start your run ${arrow}</button><button id="practice" class="text-button">Practice flight <span>↗</span></button></div>
       <button id="learn" class="learn-button"><span aria-hidden="true">◎</span><span id="learn-label">First drive? Learn the moves</span><span aria-hidden="true">↗</span></button>
       <div class="ghost-setting"><button data-ghost-toggle aria-pressed="true">Ghost on</button><span id="ghost-home-copy">Finish a run to save a distance ghost.</span></div>
@@ -124,6 +131,7 @@ let progressStored = true;
 let resumeAfterGarage = false;
 let lastReward: RunReward | null = null;
 try { profile = parseProfile(localStorage.getItem(PROGRESS_KEY)); } catch { progressStored = false; }
+let previewCar: CarId = profile.selectedCar;
 const systemMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let graphics: GraphicsSettings = parseSettings(null);
 try { graphics = parseSettings(localStorage.getItem(SETTINGS_KEY)); } catch { /* Defaults work without storage. */ }
@@ -187,6 +195,7 @@ function clearInput() {
 function focusRoad() { $('scene').querySelector('canvas')?.focus({ preventScroll: true }); }
 
 function start(mode: Mode = 'run', guided = false) {
+  if (!guided && sim.phase === 'ready' && !profile.cars.includes(previewCar)) return;
   clearInput(); sim.start(mode, 42, guided ? 'vector' : profile.selectedCar); noticeTime = 0;
   progression.begin(sim, profile); lastReward = null;
   world?.setCar(sim.carId);
@@ -205,6 +214,7 @@ function syncScreens() {
   app.dataset.phase = sim.phase;
   app.dataset.school = school.active ? 'active' : 'off';
   $('welcome').hidden = sim.phase !== 'ready';
+  if (sim.phase === 'ready') { previewCar = profile.selectedCar; syncCarSelector(); }
   $('briefing').hidden = sim.phase !== 'ready';
   $('hud').hidden = sim.phase === 'ready';
   $('energy-panel').hidden = sim.phase === 'ready';
@@ -279,6 +289,7 @@ window.addEventListener('keydown', event => {
   if ((event.code === 'Space' || event.code === 'Enter') && event.target instanceof Element && event.target.closest('button, a')) return;
   if (boundKeys.has(event.code)) event.preventDefault();
   if (event.repeat) return;
+  if (sim.phase === 'ready' && (event.code === 'ArrowLeft' || event.code === 'ArrowRight')) { browseCar(event.code === 'ArrowLeft' ? -1 : 1); return; }
   if ((event.code === 'Space' || event.code === 'Enter') && (sim.phase === 'ready' || sim.phase === 'crashed')) { start(sim.phase === 'ready' ? 'run' : sim.mode); return; }
   if (event.code === 'Escape' || event.code === 'KeyP') { togglePause(); return; }
   if (event.code === 'KeyR' && sim.phase !== 'ready') { restart(); return; }
@@ -344,6 +355,38 @@ catch {
   $<HTMLButtonElement>('learn').disabled = true;
 }
 
+let showcase: CarShowcase | null = null;
+try { showcase = new CarShowcase($('car-showcase')); } catch { /* A static silhouette keeps selection usable if a second WebGL context is unavailable. */ }
+
+function syncCarSelector() {
+  const car = getCar(previewCar), owned = profile.cars.includes(previewCar);
+  const color = PAINTS.find(paint => paint.id === profile.equipped)!.color;
+  $('car-position').textContent = `${String(GARAGE_CARS.findIndex(c => c.id === previewCar) + 1).padStart(2,'0')} / 07`;
+  $('starting-car-name').textContent = car.name; $('starting-car-role').textContent = car.role;
+  $('starting-car-stats').textContent = `${Math.round((car.cruise + car.boost) * 3.6)} km/h boost · ${(93 / car.flightDrain).toFixed(1)} s powered lift · ${car.agility.toLowerCase()} steering`;
+  $('starting-car-state').textContent = owned ? `Selected · ${progressStored ? 'saved here' : 'session only'}` : `Locked · ${profile.credits} / ${car.price} CR`;
+  const unlock = $<HTMLButtonElement>('starting-car-unlock'); unlock.hidden = owned;
+  unlock.textContent = `Unlock · ${car.price} CR`; unlock.disabled = profile.credits < car.price;
+  $<HTMLButtonElement>('start').disabled = !world || !owned; $<HTMLButtonElement>('practice').disabled = !world || !owned;
+  if (showcase) showcase.setCar(previewCar, color);
+  else { $('car-showcase').innerHTML = carPreview(car); $('car-showcase').style.setProperty('--paint', `#${color.toString(16).padStart(6,'0')}`); }
+}
+function browseCar(direction: -1 | 1) {
+  if (sim.phase !== 'ready') return;
+  const index = GARAGE_CARS.findIndex(car => car.id === previewCar);
+  previewCar = GARAGE_CARS[(index + direction + GARAGE_CARS.length) % GARAGE_CARS.length].id;
+  if (profile.cars.includes(previewCar)) { profile = useCar(profile, previewCar).profile; saveProgress(); }
+  syncProgression();
+}
+$('car-previous').addEventListener('click', () => browseCar(-1));
+$('car-next').addEventListener('click', () => browseCar(1));
+$('starting-car-unlock').addEventListener('click', () => {
+  if (sim.phase !== 'ready') return;
+  const result = useCar(profile, previewCar);
+  if (result.outcome === 'insufficient' || result.outcome === 'invalid') return;
+  profile = result.profile; saveProgress(); syncProgression();
+});
+
 function saveProgress() {
   try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(profile)); progressStored = true; }
   catch { progressStored = false; }
@@ -388,6 +431,7 @@ function syncProgression(message = '') {
   document.querySelectorAll('#paint-grid .paint-preview').forEach(preview => preview.innerHTML = carPreview(selectedCar));
   if (!running) world?.setCar(profile.selectedCar);
   world?.setPaint(PAINTS.find(paint => paint.id === profile.equipped)!.color);
+  syncCarSelector();
 }
 document.querySelectorAll('[data-garage-open]').forEach(button => button.addEventListener('click', () => {
   resumeAfterGarage = sim.phase === 'playing';
@@ -409,7 +453,7 @@ $('car-grid').addEventListener('click', event => {
   if (!button || button.disabled) return;
   const result = useCar(profile, button.dataset.car!);
   if (result.outcome === 'invalid' || result.outcome === 'insufficient') return;
-  profile = result.profile; saveProgress();
+  profile = result.profile; previewCar = profile.selectedCar; saveProgress();
   syncProgression(`${getCar(profile.selectedCar).name} ${result.outcome === 'unlocked' ? 'unlocked.' : 'selected.'}`);
 });
 $('paint-grid').addEventListener('click', event => {
@@ -623,7 +667,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('qa')) {
       elapsed: sim.elapsed, ghostEnabled, ghostAvailable: !!savedGhost, ghostVisible: world?.ghostVisible,
       ghostPose, ghostDuration: raceGhost ? ghostDuration(raceGhost) : null,
       activePointers: touchPointers.size, pixelRatio: world?.renderer.getPixelRatio(), carBounds: world?.inspectCarBounds(),
-      carId: sim.carId, renderedCar: world?.carId, ghostCar: world?.ghostCarId, speed: sim.speed, profile: { ...profile, owned: [...profile.owned], cars: [...profile.cars] }, challenge: progression.status(sim), lastReward, progressStored, paintColor: world?.paintColor,
+      previewCar, showcase: showcase?.inspect(), carId: sim.carId, renderedCar: world?.carId, ghostCar: world?.ghostCarId, speed: sim.speed, profile: { ...profile, owned: [...profile.owned], cars: [...profile.cars] }, challenge: progression.status(sim), lastReward, progressStored, paintColor: world?.paintColor,
       graphics, effects: world?.inspectEffects(), audio: audio.inspect(), fps,
       renderCalls: world?.renderer.info.render.calls, geometries: world?.renderer.info.memory.geometries }),
   } });

@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.0 — Start-screen collection and redesigned cars — 2026-10-29
+
+- Added < / > car browsing before a run, with keyboard arrows, a lit 3D preview, performance summary and saved owned-car selection.
+- Added explicit locked-car pricing and home-screen unlocking; blocked starting a locked preview with either buttons or keyboard shortcuts.
+- Rebuilt all seven original models with different body profiles, real wheel openings, rounded tyres, detailed rims, glass, mirrors and model-specific lights. Added an open pickup bed, rally spoiler, retro chrome, buggy roll cage, supercar wing/intakes, muscle-car scoop/stripes and flight-car canopy/fins.
+- Kept existing handling differences, directional jets, shared paints, career saves and ghost compatibility.
+- Adapted the selector to portrait/landscape phones with 44px minimum arrow targets and scrollable compact layouts.
+- Used an on-demand, bounded preview cache with a static fallback if an extra WebGL context is unavailable.
+- Verified all 67 source tests, TypeScript/build and a six-group browser flow covering selection, purchases, persistence, mobile jets, keyboard controls, four phone sizes and blocked storage.
+
 ## v0.3.0 — Seven-car garage and directional jets — 2026-10-27
 
 - Replaced the starter with an original angular metallic pickup and matching garage preview.
