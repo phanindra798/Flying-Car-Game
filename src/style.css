@@ -541,3 +541,16 @@ h2 { font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif; font-s
   .route-progress { margin: 4px 0; gap: 5px; }
   .route-progress i { width: 6px; height: 6px; }
 }
+
+.car-selector { grid-row: 1 / 10; }
+.route-picker { display: flex; flex-direction: column; gap: 5px; color: #b8d0d5; font-size: 9px; letter-spacing: 1px; min-width: 0; }
+.route-picker select { min-height: 44px; width: 100%; border: 1px solid #6ee1ec65; border-radius: 6px; padding: 8px 10px; background: #153f49; color: #eefff8; font: inherit; font-size: 13px; }
+#route-description { font-size: 10px; letter-spacing: 0; line-height: 1.4; }
+.route-review { margin: 16px 0; padding: 12px; border: 1px solid #6ee1ec45; border-radius: 8px; }
+.route-review > strong { font-size: 12px; color: #b7edf5; }
+.route-review ol { list-style: none; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 0; gap: 8px; margin: 12px 0 0; }
+.route-review li { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #bccbce; text-align: center; font-size: 9px; text-transform: capitalize; }
+.route-review li b { border: 1px solid currentColor; border-radius: 50%; padding: 4px; width: 25px; }
+.route-review li[data-state='banked'] { color: #d6ff78; }
+.route-review li[data-state='missed'], .route-review li[data-state='lost'] { color: #ffad8a; }
+@media (max-width:720px) and (orientation:portrait) { .route-picker { flex: none; } }

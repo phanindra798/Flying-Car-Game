@@ -2,9 +2,9 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current version: v0.5.0 — Stunt Route.** A separate 1.2 km course adds eight automatic launch ramps, eight airborne rings, clean-landing bonuses, finish medals and per-car local records. Finish to earn garage credits. The seven-car start-screen collection remains available in every mode.
+**Current version: v0.6.0 — Course selection and ring review.** Choose Coastline or the new Sky Switch route, keep separate per-car records for each, and review every ring after finishing or crashing.
 
-This update follows v0.4.0. Existing highway records, garage ownership and saves remain compatible.
+This update follows v0.5.0 and preserves existing Coastline records and garage progress.
 
 ## Local development
 
@@ -58,7 +58,7 @@ Practice flight offers an empty road; scored runs include traffic. Completed tri
 
 ## Stunt Route
 
-Choose **STUNT ROUTE** on the home screen after selecting an owned car. The traffic-free route is 1,200 metres long, with eight fixed ramp/ring pairs across four lanes. The HUD tells you the next lane (1 is leftmost), distance to the launch lip/ring, and how many rings you have banked. There is no countdown; faster finishes break equal-score ties in your car's personal record.
+Choose a course on the home screen, then press **DRIVE COASTLINE** or **DRIVE SKY SWITCH** after selecting an owned car. Coastline is the original 1,200 m route. Sky Switch is 1,400 m, with higher rings, longer ramp-to-ring gaps and a different lane sequence. Both are traffic-free, with eight ramp/ring pairs across four lanes. Course selection is remembered on this browser. The HUD tells you the next lane (1 is leftmost), distance to the launch lip/ring, and how many rings you have banked. There is no countdown; faster finishes break equal-score ties in your car's personal record.
 
 1. Line up before the ramp. Driving onto its deck carries the car upward and launches it automatically at the lip without using thruster energy. Driving off its side drops you back toward the road. Flying over it does not trigger another launch.
 2. Aim the **centre of the car** through the diamond inside the ring. Higher rings need a short hold of JUMP/Space after launch. Continuous flight can take you above the ring. Boost changes your approach timing. Rings are non-solid: missing one does not crash the car.
@@ -72,7 +72,7 @@ Choose **STUNT ROUTE** on the home screen after selecting an owned car. The traf
 | Silver | 6–7 |
 | Gold | 8 |
 
-Ring dots are outlined before crossing, cyan while awaiting a landing, lime after banking and orange after a miss or lost landing. Each car has a separate best-score record under `boostline.stunt-route.v1`, scoped to course `coast-rings-01`. Records include score, banked rings and finish time; higher scores win, with faster time breaking ties. Bad records are discarded. If storage fails, rewards and records work for the session with visible feedback. These are local personal records, not an online leaderboard.
+Ring dots are outlined before crossing, cyan while awaiting a landing, lime after banking and orange after a miss or lost landing. The finish/interruption screen lists every ring as banked, missed, lost landing or not reached. Each car has a separate Coastline best-score record under `boostline.stunt-route.v1`, scoped to course `coast-rings-01`. Sky Switch uses its own `boostline.stunt-route.sky-switch-01.v1` key and course ID, so existing Coastline records remain compatible. Records include score, banked rings and finish time; higher scores win, with faster time breaking ties. Bad records are discarded. If storage fails, rewards and records work for the session with visible feedback. These are local personal records, not an online leaderboard.
 
 ## Driving school and landing guidance
 
@@ -188,7 +188,7 @@ The simulation runs independently of the renderer so movement, collisions, traff
 
 ## Verification
 
-The v0.5.0 build passes **77 automated tests** across nine source files, plus TypeScript checking and the production build. New tests cover ramp climb/launch and edge exits, interpolated ring crossings, clean/rough/crash banking, pause/reset/finish rules, all seven cars completing all eight rings, one-time rewards, wallet caps, separate records and highway ghost isolation. Existing gameplay, traffic, tutorial, garage and rendering tests still pass.
+The v0.6.0 build passes **78 automated tests** across nine source files, plus TypeScript checking and the production build. New tests cover ramp climb/launch and edge exits, interpolated ring crossings, clean/rough/crash banking, pause/reset/finish rules, all seven cars completing all eight rings on both courses, one-time rewards, wallet caps, separate records and highway ghost isolation. Existing gameplay, traffic, tutorial, garage and rendering tests still pass.
 
 A browser playthrough using actual touch inputs completed the 1.2 km course with 8/8 rings, a Gold finish and 68 credits, then verified persistence, no duplicate rewards, restart/home behavior, deferred car changes and separation from highway records. Four phone layouts (320×568, 390×844, 568×320 and 844×390), desktop keyboard entry/pause and a full completion with blocked storage were checked without page/console errors. Physical-phone performance, heat and comfort still need real-device playtesting.
 
@@ -229,3 +229,5 @@ A browser playthrough using actual touch inputs completed the 1.2 km course with
 Models are generated in code. The start-screen showroom redraws only when the car, paint or size changes, caps pixel ratio at 1.5 and lazily caches up to seven models. It uses a second WebGL context and falls back to a static silhouette if that context cannot be created. No external game assets or reference-video footage are included. Barlow Condensed and DM Sans are bundled locally through Fontsource, with system-font fallbacks. Best score, distance ghost, ghost visibility, graphics preferences, sound preference, tutorial completion, per-car stunt-route records and career/garage progress use localStorage; no data is sent to a game backend.
 
 The `.local/` directory is intentionally ignored by Git, blocked by the Vite development server and absent from the build output. It is reserved for personal notes and local verification artifacts. Do not force-add its contents or copy it into `public/`.
+
+The v0.6 browser check additionally completed Sky Switch, verified its eight-ring result review and separate record without overwriting a Coastline fixture, and checked the course picker at all four phone sizes.

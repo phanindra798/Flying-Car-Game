@@ -1,5 +1,5 @@
 import './style.css';
-import { ROUTE_ID, ROUTE_LENGTH, ROUTE_RECORD_KEY, ROUTE_STATIONS, parseRouteRecords, betterRoute, routeMedal } from './game/stunt-route';
+import { ROUTE_ID, ROUTES, getRoute, routeRecordKey, ROUTE_STATIONS, parseRouteRecords, betterRoute, routeMedal } from './game/stunt-route';
 import { CarShowcase } from './game/car-showcase';
 import { GARAGE_CARS, getCar, carPreview, type CarId } from './game/garage-cars';
 import { PROGRESS_KEY, PAINTS, CHALLENGES, MAX_CREDITS, parseProfile, usePaint, useCar, nextChallenge, RunProgress, type RunReward } from './game/progression';
@@ -23,7 +23,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="#" aria-label="BOOSTLINE home"><span class="brand-mark">B<span>↗</span></span><span>BOOSTLINE<small>FIND YOUR LINE.</small></span></a>
     <div class="route-badge"><span class="live-dot"></span> PACIFIC COAST <span class="route-number">/ 01</span></div>
-    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.5</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
+    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.6</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
   </header>
 
   <main>
@@ -38,6 +38,7 @@ app.innerHTML = `
         <div class="starting-car-footer"><span id="starting-car-state" role="status"></span><button id="starting-car-unlock" type="button" hidden></button></div>
       </section>
       <div class="start-actions"><button id="start" class="primary-button">Start your run ${arrow}</button><button id="practice" class="text-button">Practice flight <span>↗</span></button></div>
+      <label class="route-picker" for="route-select">CHOOSE YOUR COURSE<select id="route-select">${ROUTES.map(route => `<option value="${route.id}">${route.name} · ${(route.length / 1000).toFixed(1)} km</option>`).join('')}</select><span id="route-description"></span></label>
       <button id="stunt-start" class="stunt-entry"><span><b>STUNT ROUTE</b><small>8 ramps · 8 rings · finish to earn credits</small></span><span aria-hidden="true">↗</span></button>
       <button id="learn" class="learn-button"><span aria-hidden="true">◎</span><span id="learn-label">First drive? Learn the moves</span><span aria-hidden="true">↗</span></button>
       <div class="ghost-setting"><button data-ghost-toggle aria-pressed="true">Ghost on</button><span id="ghost-home-copy">Finish a run to save a distance ghost.</span></div>
@@ -71,7 +72,7 @@ app.innerHTML = `
 
     <section id="pause-panel" class="modal-card" aria-labelledby="pause-title" hidden><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Road's waiting.</h2><p>Your run is paused. Pick up right where you left off.</p><button id="resume" class="primary-button">Back to the road ${arrow}</button><button id="pause-restart" class="secondary-button">Restart run</button><button data-ghost-toggle class="secondary-button" aria-pressed="true">Ghost on</button><button id="pause-garage" class="secondary-button" data-garage-open>Garage & challenges</button><button id="pause-home" class="text-button">Main menu</button></section>
 
-    <section id="results" class="modal-card results" aria-labelledby="results-title" hidden><span class="eyebrow" id="record-label">RUN COMPLETE</span><h2 id="results-title">One more run?</h2><p id="crash-reason"></p><div class="result-score"><span>FINAL SCORE</span><strong id="final-score">0</strong></div><div class="result-stats"><div><strong id="final-distance">0 m</strong><span>DISTANCE</span></div><div><strong id="final-combo">1×</strong><span>BEST COMBO</span></div><div><strong id="final-tricks">0</strong><span>LANDED TRICKS</span></div></div><p id="route-result" class="route-result" hidden></p><p id="ghost-result" class="ghost-result" role="status"></p><div id="run-reward" class="run-reward" hidden><strong id="reward-total"></strong><p id="reward-breakdown"></p><p id="reward-challenge"></p><span id="reward-storage"></span></div><button id="retry" class="primary-button">Try again <span>R ${arrow}</span></button><button id="results-garage" class="secondary-button" data-garage-open>Visit garage</button><button id="results-home" class="text-button">Back to main menu</button></section>
+    <section id="results" class="modal-card results" aria-labelledby="results-title" hidden><span class="eyebrow" id="record-label">RUN COMPLETE</span><h2 id="results-title">One more run?</h2><p id="crash-reason"></p><div class="result-score"><span>FINAL SCORE</span><strong id="final-score">0</strong></div><div class="result-stats"><div><strong id="final-distance">0 m</strong><span>DISTANCE</span></div><div><strong id="final-combo">1×</strong><span>BEST COMBO</span></div><div><strong id="final-tricks">0</strong><span>LANDED TRICKS</span></div></div><div id="route-review" class="route-review" hidden></div><p id="route-result" class="route-result" hidden></p><p id="ghost-result" class="ghost-result" role="status"></p><div id="run-reward" class="run-reward" hidden><strong id="reward-total"></strong><p id="reward-breakdown"></p><p id="reward-challenge"></p><span id="reward-storage"></span></div><button id="retry" class="primary-button">Try again <span>R ${arrow}</span></button><button id="results-garage" class="secondary-button" data-garage-open>Visit garage</button><button id="results-home" class="text-button">Back to main menu</button></section>
 
     <dialog id="garage" class="help-dialog garage-dialog" aria-labelledby="garage-title">
       <div class="help-heading"><span class="eyebrow">YOUR COAST. YOUR COLOURS.</span><button id="garage-close" class="icon-button" aria-label="Close garage">×</button></div>
@@ -134,8 +135,22 @@ let resumeAfterGarage = false;
 let lastReward: RunReward | null = null;
 try { profile = parseProfile(localStorage.getItem(PROGRESS_KEY)); } catch { progressStored = false; }
 let previewCar: CarId = profile.selectedCar;
-let routeRecords = parseRouteRecords(null), routeStored = true;
-try { routeRecords = parseRouteRecords(localStorage.getItem(ROUTE_RECORD_KEY)); } catch { routeStored = false; }
+let selectedRoute = ROUTE_ID;
+try { selectedRoute = getRoute(localStorage.getItem('boostline.route.selected') ?? ROUTE_ID).id; } catch { /* Default course remains usable. */ }
+const routeBooks: Record<string, ReturnType<typeof parseRouteRecords>> = {};
+const routeSaveStatus: Record<string, boolean> = {};
+for (const route of ROUTES) {
+  try { routeBooks[route.id] = parseRouteRecords(localStorage.getItem(routeRecordKey(route.id)), route.id); routeSaveStatus[route.id] = true; }
+  catch { routeBooks[route.id] = {}; routeSaveStatus[route.id] = false; }
+}
+let routeRecords = routeBooks[selectedRoute], routeStored = routeSaveStatus[selectedRoute];
+$<HTMLSelectElement>('route-select').value = selectedRoute;
+$('route-select').addEventListener('change', () => {
+  selectedRoute = getRoute($<HTMLSelectElement>('route-select').value).id;
+  routeRecords = routeBooks[selectedRoute]; routeStored = routeSaveStatus[selectedRoute];
+  try { localStorage.setItem('boostline.route.selected', selectedRoute); } catch { /* Selection still works for this session. */ }
+  syncCarSelector();
+});
 $('route-progress').innerHTML = ROUTE_STATIONS.map(station => `<i data-ring="${station.id}" aria-label="Ring ${station.id + 1}: ahead"></i>`).join('');
 const systemMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let graphics: GraphicsSettings = parseSettings(null);
@@ -201,7 +216,7 @@ function focusRoad() { $('scene').querySelector('canvas')?.focus({ preventScroll
 
 function start(mode: Mode = 'run', guided = false) {
   if (!guided && sim.phase === 'ready' && !profile.cars.includes(previewCar)) return;
-  clearInput(); sim.start(mode, 42, guided ? 'vector' : profile.selectedCar); noticeTime = 0;
+  clearInput(); sim.start(mode, 42, guided ? 'vector' : profile.selectedCar, selectedRoute); noticeTime = 0;
   progression.begin(sim, profile); lastReward = null;
   world?.setCar(sim.carId);
   recorder.start(sim); raceGhost = mode === 'run' ? savedGhost : null; ghostPose = null;
@@ -229,7 +244,7 @@ function syncScreens() {
   $('lesson-panel').hidden = !school.active || school.completed || sim.phase !== 'playing';
   $('results').hidden = sim.phase !== 'crashed' && sim.phase !== 'finished';
   $('touch-controls').hidden = sim.phase !== 'playing';
-  $('run-label').textContent = school.active ? 'DRIVING SCHOOL · VECTOR PICKUP' : `${sim.mode === 'practice' ? 'PRACTICE' : sim.mode === 'stunt' ? 'STUNT ROUTE' : 'RUN'} · ${getCar(sim.carId).name.toUpperCase()}`;
+  $('run-label').textContent = school.active ? 'DRIVING SCHOOL · VECTOR PICKUP' : `${sim.mode === 'practice' ? 'PRACTICE' : sim.mode === 'stunt' ? sim.route!.definition.name.toUpperCase() : 'RUN'} · ${getCar(sim.carId).name.toUpperCase()}`;
   syncLesson();
   if (sim.phase === 'paused') $(school.completed ? 'school-race' : 'resume').focus();
   if (sim.phase === 'crashed' || sim.phase === 'finished') $('retry').focus();
@@ -292,6 +307,7 @@ const boundKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'S
 window.addEventListener('keydown', event => {
   if (help.open || settingsDialog.open || garageDialog.open) return;
   if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target instanceof Element && event.target.closest('select, input, textarea')) return;
   if ((event.code === 'Space' || event.code === 'Enter') && event.target instanceof Element && event.target.closest('button, a')) return;
   if (boundKeys.has(event.code)) event.preventDefault();
   if (event.repeat) return;
@@ -376,7 +392,9 @@ function syncCarSelector() {
   unlock.textContent = `Unlock · ${car.price} CR`; unlock.disabled = profile.credits < car.price;
   $<HTMLButtonElement>('start').disabled = !world || !owned; $<HTMLButtonElement>('practice').disabled = !world || !owned;
   $<HTMLButtonElement>('stunt-start').disabled = !world || !owned;
+  $('route-description').textContent = getRoute(selectedRoute).note;
   const record = routeRecords[previewCar];
+  $('stunt-start').querySelector('b')!.textContent = `DRIVE ${getRoute(selectedRoute).name.toUpperCase()}`;
   $('stunt-start').querySelector('small')!.textContent = record ? `${routeMedal(record.rings)} · best ${number(record.score)} · ${record.rings}/8 rings` : '8 ramps · 8 rings · finish to earn credits';
   if (showcase) showcase.setCar(previewCar, color);
   else { $('car-showcase').innerHTML = carPreview(car); $('car-showcase').style.setProperty('--paint', `#${color.toString(16).padStart(6,'0')}`); }
@@ -532,7 +550,7 @@ function updateHud() {
   if (sim.route && sim.phase === 'playing') {
     const next = sim.route.next;
     const rampAhead = next && sim.distance < next.ramp;
-    $('route-next').textContent = next ? `${rampAhead ? 'RAMP' : 'RING'} ${next.id + 1}/8 · LANE ${next.lane + 1} · ${Math.max(0, Math.ceil((rampAhead ? next.ramp : next.ring) - sim.distance))} M` : `FINISH · ${Math.max(0, Math.ceil(ROUTE_LENGTH - sim.distance))} M`;
+    $('route-next').textContent = next ? `${rampAhead ? 'RAMP' : 'RING'} ${next.id + 1}/8 · LANE ${next.lane + 1} · ${Math.max(0, Math.ceil((rampAhead ? next.ramp : next.ring) - sim.distance))} M` : `FINISH · ${Math.max(0, Math.ceil(sim.route.definition.length - sim.distance))} M`;
     $('route-hint').textContent = sim.route.pending ? 'Release flight · land cleanly to bank' : next ? next.height >= 4.8 ? 'Higher ring · hold flight after launch' : 'Drive up the ramp · aim through the diamond' : 'Land before the finish to bank your points';
     $('route-banked').textContent = `${sim.route.banked}/8 BANKED${sim.route.pending ? ` · ${sim.route.pending} IN THE AIR` : ''}`;
     for (const [i, state] of sim.route.rings.entries()) {
@@ -626,13 +644,17 @@ function finishRun() {
   $('final-combo').textContent = `${sim.maxCombo}×`;
   $('final-tricks').textContent = String(sim.tricksLanded);
   $('route-result').hidden = sim.mode !== 'stunt';
+  $('route-review').hidden = sim.mode !== 'stunt';
   if (sim.mode === 'stunt') {
+    $('route-review').innerHTML = `<strong>${sim.route!.definition.name} · ring review</strong><ol>${sim.route!.rings.map((state, index) => `<li data-state="${state}"><b>${index + 1}</b><span>${state === 'ahead' ? 'Not reached' : state === 'lost' ? 'Lost landing' : state === 'pending' ? 'In the air' : state}</span></li>`).join('')}</ol>`;
     if (sim.phase === 'finished') {
       const candidate = { score: sim.score, rings: sim.route!.banked, time: sim.elapsed };
       const improved = betterRoute(candidate, routeRecords[sim.carId]);
       if (improved) {
         routeRecords = { ...routeRecords, [sim.carId]: candidate };
-        try { localStorage.setItem(ROUTE_RECORD_KEY, JSON.stringify({ version: 1, course: ROUTE_ID, records: routeRecords })); routeStored = true; } catch { routeStored = false; }
+        routeBooks[sim.route!.definition.id] = routeRecords;
+        try { localStorage.setItem(routeRecordKey(sim.route!.definition.id), JSON.stringify({ version: 1, course: sim.route!.definition.id, records: routeRecords })); routeStored = true; } catch { routeStored = false; }
+        routeSaveStatus[sim.route!.definition.id] = routeStored;
       }
       $('route-result').textContent = `${improved ? 'New best' : 'Best'} for ${getCar(sim.carId).name}: ${number(routeRecords[sim.carId]!.score)} points. ${routeStored ? 'Saved on this browser.' : 'Session only: record could not be saved.'}`;
     } else $('route-result').textContent = 'Reach the finish for route credits and a record. Give your next rotation more airtime.';
@@ -693,7 +715,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('qa')) {
   Object.defineProperty(window, '__boostline', { value: {
     snapshot: () => ({ phase: sim.phase, mode: sim.mode, x: sim.x, lane: sim.lane, height: sim.height,
       energy: sim.energy, verticalSpeed: sim.verticalSpeed, distance: sim.distance, score: sim.score, tricksLanded: sim.tricksLanded,
-      route: sim.route ? { rings: [...sim.route.rings], banked: sim.route.banked, pending: sim.route.pending, next: sim.route.next, riding: sim.route.riding, launches: [...sim.route.launched] } : null,
+      selectedRoute, route: sim.route ? { id: sim.route.definition.id, length: sim.route.definition.length, rings: [...sim.route.rings], banked: sim.route.banked, pending: sim.route.pending, next: sim.route.next, riding: sim.route.riding, launches: [...sim.route.launched] } : null,
       routeScenery: world?.inspectRoute(), routeRecords: structuredClone(routeRecords), routeStored, rampPitch: sim.rampPitch,
       pendingTricks: sim.pendingTricks, trafficCount: sim.traffic.length, pitch: sim.pitch, roll: sim.roll,
       lesson: school.active ? school.lesson : null, lessonComplete: school.completed, lessonProgress: school.progress,

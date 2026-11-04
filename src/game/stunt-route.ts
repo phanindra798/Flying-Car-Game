@@ -13,6 +13,13 @@ export const ROUTE_STATIONS = [1, 2, 0, 3, 1, 3, 2, 0].map((lane, index) => ({
   id: index, lane, ramp: 80 + index * 140, ring: 100 + index * 140,
   height: [3.8, 4.2, 3.8, 4.2, 5.4, 4.8, 5.4, 4.8][index],
 }));
+export const ROUTES = [
+  { id: ROUTE_ID, name: 'Coastline', length: ROUTE_LENGTH, note: 'Balanced launches · learn the rhythm', stations: ROUTE_STATIONS },
+  { id: 'sky-switch-01', name: 'Sky Switch', length: 1400, note: 'Higher rings · longer flights · wider lane changes', stations: [1, 3, 0, 2, 0, 3, 1, 2].map((lane, id) => ({ id, lane, ramp: 90 + id * 165, ring: 114 + id * 165, height: [4.6, 5.4, 4.8, 5.6, 5.2, 5.8, 4.8, 5.6][id] })) },
+] as const;
+export type RouteId = typeof ROUTES[number]['id'];
+export function getRoute(id: string) { return ROUTES.find(route => route.id === id) ?? ROUTES[0]; }
+export function routeRecordKey(id: string) { return id === ROUTE_ID ? ROUTE_RECORD_KEY : `boostline.stunt-route.${getRoute(id).id}.v1`; }
 export type RingState = 'ahead' | 'pending' | 'banked' | 'missed' | 'lost';
 export interface RoutePose { distance: number; x: number; height: number }
 const laneX = (lane: number) => -5.25 + lane * 3.5;
@@ -24,24 +31,26 @@ export function crossingAt(before: RoutePose, after: RoutePose, distance: number
 
 /** Per-attempt state only. Fixed stations make retries learnable and allocation bounded. */
 export class StuntRoute {
+  readonly definition;
+  constructor(id: string = ROUTE_ID) { this.definition = getRoute(id); }
   readonly rings: RingState[] = ROUTE_STATIONS.map(() => 'ahead');
   readonly launched = new Set<number>();
   riding: number | null = null;
   get pending() { return this.rings.filter(state => state === 'pending').length; }
   get banked() { return this.rings.filter(state => state === 'banked').length; }
   get collected() { return this.rings.filter(state => state === 'banked' || state === 'pending' || state === 'lost').length; }
-  get next() { return ROUTE_STATIONS.find(station => this.rings[station.id] === 'ahead') ?? null; }
+  get next() { return this.definition.stations.find(station => this.rings[station.id] === 'ahead') ?? null; }
 
   ride(before: RoutePose, after: RoutePose, grounded: boolean): { height: number; launch: boolean } | null {
     if (this.riding === null && grounded) {
-      const station = ROUTE_STATIONS.find(s => {
+      const station = this.definition.stations.find(s => {
         const point = crossingAt(before, after, s.ramp - RAMP_LENGTH);
         return point && Math.abs(point.x - laneX(s.lane)) <= RAMP_HALF_WIDTH - .82 && !this.launched.has(s.id);
       });
       if (station) this.riding = station.id;
     }
     if (this.riding === null) return null;
-    const station = ROUTE_STATIONS[this.riding];
+    const station = this.definition.stations[this.riding];
     // Driving off an edge resumes ordinary gravity; no invisible side capture.
     if (Math.abs(after.x - laneX(station.lane)) > RAMP_HALF_WIDTH - .82) { this.riding = null; return null; }
     if (after.distance >= station.ramp) {
@@ -52,7 +61,7 @@ export class StuntRoute {
   }
   cross(before: RoutePose, after: RoutePose): { id: number; hit: boolean }[] {
     const crossed: { id: number; hit: boolean }[] = [];
-    for (const station of ROUTE_STATIONS) {
+    for (const station of this.definition.stations) {
       if (this.rings[station.id] !== 'ahead') continue;
       const point = crossingAt(before, after, station.ring);
       if (!point) continue;
@@ -70,11 +79,11 @@ export function routeMedal(rings: number) { return rings >= 8 ? 'GOLD' : rings >
 export const ROUTE_RECORD_KEY = 'boostline.stunt-route.v1';
 export interface RouteRecord { score: number; rings: number; time: number }
 export type RouteRecords = Partial<Record<CarId, RouteRecord>>;
-export function parseRouteRecords(raw: string | null): RouteRecords {
+export function parseRouteRecords(raw: string | null, course: string = ROUTE_ID): RouteRecords {
   if (!raw || raw.length > 4096) return {};
   try {
     const data = JSON.parse(raw);
-    if (data?.version !== 1 || data.course !== ROUTE_ID || !data.records || typeof data.records !== 'object') return {};
+    if (data?.version !== 1 || data.course !== course || !data.records || typeof data.records !== 'object') return {};
     const records: RouteRecords = {};
     for (const [id, value] of Object.entries(data.records)) {
       if (!isCarId(id) || !value || typeof value !== 'object') continue;

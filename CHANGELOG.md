@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.0 — Course selection and ring review — 2026-11-04
+
+- Added Sky Switch: a 1.4 km course with higher rings and a different lane sequence.
+- Added a saved home-screen course picker with separate per-car best scores for each route. Existing Coastline records remain compatible.
+- Added a numbered eight-ring results review for banked, missed, lost and unreached rings.
+- Kept course selection through pause/retry and preserved native keyboard selection controls.
+- Extended reachability tests to both courses for all seven cars and added record-isolation coverage.
+
 ## v0.5.0 — Stunt Route — 2026-11-04
 
 - Added a separate 1.2 km traffic-free route with eight ramp/ring pairs, a finish arch and the selected garage car.

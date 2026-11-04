@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LANES, type Simulation } from './simulation';
-import { RAMP_HEIGHT, RAMP_LENGTH, RAMP_HALF_WIDTH, RING_RADIUS, ROUTE_LENGTH, ROUTE_STATIONS } from './stunt-route';
+import { RAMP_HEIGHT, RAMP_LENGTH, RAMP_HALF_WIDTH, RING_RADIUS } from './stunt-route';
 
 /** Fixed course geometry shared by eight stations; no per-frame mesh allocation. */
 export class StuntScenery extends THREE.Group {
@@ -51,7 +51,7 @@ export class StuntScenery extends THREE.Group {
     this.visible = sim.mode === 'stunt' && sim.phase !== 'ready';
     if (!this.visible || !sim.route) { this.visibleRings = 0; return; }
     let ramps = 0, rings = 0;
-    for (const station of ROUTE_STATIONS) {
+    for (const station of sim.route.definition.stations) {
       const rampGap = station.ramp - sim.distance, ringGap = station.ring - sim.distance;
       if (rampGap > -20 && rampGap < 280) {
         this.dummy.position.set(LANES[station.lane], 0, 3 - rampGap + RAMP_LENGTH / 2); this.dummy.updateMatrix();
@@ -67,7 +67,7 @@ export class StuntScenery extends THREE.Group {
     this.ramps.count = this.markings.count = ramps; this.rings.count = this.targets.count = rings; this.visibleRings = rings;
     for (const mesh of [this.ramps, this.markings, this.rings, this.targets]) mesh.instanceMatrix.needsUpdate = true;
     if (this.rings.instanceColor) this.rings.instanceColor.needsUpdate = true;
-    this.finish.visible = ROUTE_LENGTH - sim.distance < 280; this.finish.position.z = 3 + sim.distance - ROUTE_LENGTH;
+    this.finish.visible = sim.route.definition.length - sim.distance < 280; this.finish.position.z = 3 + sim.distance - sim.route.definition.length;
   }
   inspect() { return { visible: this.visible, ramps: this.visible ? this.ramps.count : 0, rings: this.visibleRings }; }
 }

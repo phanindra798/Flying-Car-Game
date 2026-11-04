@@ -1,4 +1,4 @@
-import { StuntRoute, RAMP_HEIGHT, RAMP_LENGTH, RING_POINTS, ROUTE_LENGTH } from './stunt-route';
+import { StuntRoute, RAMP_HEIGHT, RAMP_LENGTH, RING_POINTS, ROUTE_ID } from './stunt-route';
 import { getCar, type CarId } from './garage-cars';
 import { carBounds, sweptCarHitsBox, type Vec3 } from './collision';
 import { TrafficDirector, TRAFFIC_SPEED } from './traffic';
@@ -68,9 +68,9 @@ export class Simulation {
   get stuntRemaining() { return this.stunt ? Math.max(0, this.stunt.duration - this.stunt.time) : 0; }
   get pendingLandingPoints() { return ((this.pendingTricks > 0 ? this.pendingTricks * 120 + 50 : 0) + (this.route?.pending ?? 0) * RING_POINTS) * this.combo; }
 
-  start(mode: Mode = 'run', seed = 42, carId: CarId = 'vector') {
+  start(mode: Mode = 'run', seed = 42, carId: CarId = 'vector', routeId: string = ROUTE_ID) {
     this.car = getCar(carId);
-    this.mode = mode; this.route = mode === 'stunt' ? new StuntRoute() : null; this.rampPitch = 0;
+    this.mode = mode; this.route = mode === 'stunt' ? new StuntRoute(routeId) : null; this.rampPitch = 0;
     this.phase = 'playing';
     this.x = LANES[1]; this.lane = 1;
     this.height = 0; this.verticalSpeed = 0; this.speed = this.car.cruise;
@@ -202,7 +202,7 @@ export class Simulation {
     }
     if (touchesRoad) this.land();
     if (this.phase !== 'playing') return;
-    if (this.mode === 'stunt' && this.distance >= ROUTE_LENGTH) {
+    if (this.mode === 'stunt' && this.distance >= this.route!.definition.length) {
       this.route!.land(false); this.pendingTricks = 0;
       this.phase = 'finished'; this.thrustActive = this.boostActive = false;
       this.events.push({ kind: 'finish', title: 'ROUTE COMPLETE', detail: 'Your stunt route is complete.' });

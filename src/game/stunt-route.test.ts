@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Simulation, FIXED_STEP, LANES, NO_INPUT } from './simulation';
 import { GARAGE_CARS } from './garage-cars';
-import { StuntRoute, ROUTE_ID, ROUTE_LENGTH, ROUTE_STATIONS, RAMP_HEIGHT, crossingAt, parseRouteRecords, betterRoute, routeMedal } from './stunt-route';
+import { StuntRoute, ROUTES, routeRecordKey, ROUTE_ID, ROUTE_LENGTH, ROUTE_STATIONS, RAMP_HEIGHT, crossingAt, parseRouteRecords, betterRoute, routeMedal } from './stunt-route';
 import { RunProgress, freshProfile, MAX_CREDITS, useCar } from './progression';
 import { GhostRecorder } from './ghost';
 
@@ -56,8 +56,8 @@ describe('ramp and ring rules', () => {
     expect(sim.takeEvents().filter(event=>event.kind==='finish')).toHaveLength(1);
   });
   it('allows all seven cars to bank all eight rings through steering and flight, with bounded energy', () => {
-    for(const car of GARAGE_CARS) {
-      const sim=new Simulation();sim.start('stunt',42,car.id);
+    for(const course of ROUTES) for(const car of GARAGE_CARS) {
+      const sim=new Simulation();sim.start('stunt',42,car.id,course.id);
       for(let tick=0;tick<6000&&sim.phase==='playing';tick++) {
         const next=sim.route!.next;
         if(next && next.lane!==sim.lane) sim.changeLane(next.lane>sim.lane?1:-1);
@@ -101,4 +101,15 @@ describe('stunt finish rewards and personal records', () => {
     expect(betterRoute({...record,score:3401},record)).toBe(true);expect(betterRoute({...record,time:46},record)).toBe(true);expect(betterRoute({...record,score:3000},record)).toBe(false);
     expect([0,4,6,8].map(routeMedal)).toEqual(['FINISHER','BRONZE','SILVER','GOLD']);
   });
+});
+
+ describe('course isolation',()=>{
+ it('keeps Coastline saves compatible and rejects cross-course records',()=>{
+ const data=JSON.stringify({version:1,course:ROUTE_ID,records:{vector:{score:7080,rings:8,time:49}}});
+ expect(parseRouteRecords(data).vector?.score).toBe(7080);
+ expect(parseRouteRecords(data,ROUTES[1].id)).toEqual({});
+ expect(routeRecordKey(ROUTE_ID)).not.toBe(routeRecordKey(ROUTES[1].id));
+ const sim=new Simulation();sim.start('stunt',42,'vector',ROUTES[1].id);expect(sim.route!.definition.length).toBe(1400);
+ sim.start('stunt');expect(sim.route!.definition.id).toBe(ROUTE_ID);
+ });
 });
