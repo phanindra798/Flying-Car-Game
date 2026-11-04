@@ -21,7 +21,7 @@ export const CHALLENGES = [
 ] as const;
 export type Challenge = typeof CHALLENGES[number];
 export type ChallengeStatus = { challenge: Challenge; index: number; value: number; reached: boolean };
-export type RunReward = { profile: Profile; earned: number; distance: number; stunts: number; closeCalls: number; bonus: number; challenge: Challenge | null };
+export type RunReward = { profile: Profile; earned: number; distance: number; stunts: number; closeCalls: number; bonus: number; rings?: number; completion?: number; challenge: Challenge | null };
 
 export function freshProfile(): Profile {
   return { version: 2, credits: 0, owned: ['ivory'], equipped: 'ivory', completed: 0, cars: ['vector'], selectedCar: 'vector' };
@@ -72,7 +72,7 @@ export class RunProgress {
   private near = 0;
 
   begin(sim: Simulation, profile: Profile) {
-    this.active = sim.mode === 'run' && sim.phase === 'playing';
+    this.active = sim.mode !== 'practice' && sim.phase === 'playing';
     this.target = profile.completed;
     this.near = 0;
   }
@@ -88,6 +88,12 @@ export class RunProgress {
     return { challenge, index: this.target, value, reached: value >= challenge.target };
   }
   settle(profile: Profile, sim: Simulation): RunReward | null {
+    if (this.active && sim.mode === 'stunt' && sim.phase === 'finished' && sim.route) {
+      this.active = false;
+      const rings = sim.route.banked * 6, completion = 20;
+      const credits = Math.min(MAX_CREDITS, profile.credits + rings + completion);
+      return { profile: { ...profile, credits }, earned: credits - profile.credits, distance: 0, stunts: 0, closeCalls: 0, bonus: 0, rings, completion, challenge: null };
+    }
     if (!this.active || sim.mode !== 'run' || sim.phase !== 'crashed') return null;
     const status = this.status(sim);
     this.active = false;

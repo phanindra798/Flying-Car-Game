@@ -2,9 +2,9 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current version: v0.4.0 — start-screen car selection and redesigned vehicles.** Browse all seven cars with **< / >**, see the actual 3D model, and choose or unlock a car before driving. Vehicle bodies now have distinct proportions, wheel openings, rounded tyres, detailed rims and model-specific lights. These are original stylized models designed for mobile, not photorealistic scanned assets. Existing driving stats, credits, paints, challenges and compatible ghosts carry forward.
+**Current version: v0.5.0 — Stunt Route.** A separate 1.2 km course adds eight automatic launch ramps, eight airborne rings, clean-landing bonuses, finish medals and per-car local records. Finish to earn garage credits. The seven-car start-screen collection remains available in every mode.
 
-This update follows v0.3.0 without changing existing vehicle performance or save formats.
+This update follows v0.4.0. Existing highway records, garage ownership and saves remain compatible.
 
 ## Local development
 
@@ -37,7 +37,7 @@ npm run preview
 
 ## Controls
 
-On the start screen, tap **< / >** or use the keyboard left/right arrows to browse cars. Browsing an owned car selects and saves it immediately. Locked cars show their price and an **Unlock** button; Start and Practice stay disabled until you unlock that car or return to an owned one. The driving lesson always uses the free starter.
+On the start screen, tap **< / >** or use the keyboard left/right arrows to browse cars. Browsing an owned car selects and saves it immediately. Locked cars show their price and an **Unlock** button; Start, Practice and Stunt Route stay disabled until you unlock that car or return to an owned one. The driving lesson always uses the free starter.
 
 On a phone, use the on-screen buttons. Swipe horizontally across the road or tap **← / →** to change lane. Each deliberate swipe changes one lane; swiping vertically does not steer. Tap **JUMP** to jump, then keep holding to fly. Hold **BOOST** for forward speed, tap **FLIP / ROLL LEFT / ROLL RIGHT** while airborne, and hold **SLAM** to descend quickly. You can hold JUMP with one finger while tapping a stunt with another. Release JUMP to fall naturally; energy refills after landing. Use the pause button to resume, restart or return home.
 
@@ -55,6 +55,24 @@ Desktop controls:
 | R | Restart the current mode |
 
 Practice flight offers an empty road; scored runs include traffic. Completed tricks are banked on a clean landing. Best scored runs are saved on the device when browser storage is available.
+
+## Stunt Route
+
+Choose **STUNT ROUTE** on the home screen after selecting an owned car. The traffic-free route is 1,200 metres long, with eight fixed ramp/ring pairs across four lanes. The HUD tells you the next lane (1 is leftmost), distance to the launch lip/ring, and how many rings you have banked. There is no countdown; faster finishes break equal-score ties in your car's personal record.
+
+1. Line up before the ramp. Driving onto its deck carries the car upward and launches it automatically at the lip without using thruster energy. Driving off its side drops you back toward the road. Flying over it does not trigger another launch.
+2. Aim the **centre of the car** through the diamond inside the ring. Higher rings need a short hold of JUMP/Space after launch. Continuous flight can take you above the ring. Boost changes your approach timing. Rings are non-solid: missing one does not crash the car.
+3. Release flight and land cleanly to bank **150 points per ring × your landing combo**. Flips/rolls can add their usual landing points. A rough landing drops pending ring points; an unfinished rotation crashes this mode. Pending points also expire if you cross the finish while still airborne.
+4. Reach the finish to claim **20 CR + 6 CR per banked ring** (up to 68 CR), once per completed attempt. Returning home, restarting or crashing before the finish awards no route credits. Highway challenges, highway best score and distance ghosts remain separate.
+
+| Medal | Banked rings |
+| --- | ---: |
+| Finisher | 0–3 |
+| Bronze | 4–5 |
+| Silver | 6–7 |
+| Gold | 8 |
+
+Ring dots are outlined before crossing, cyan while awaiting a landing, lime after banking and orange after a miss or lost landing. Each car has a separate best-score record under `boostline.stunt-route.v1`, scoped to course `coast-rings-01`. Records include score, banked rings and finish time; higher scores win, with faster time breaking ties. Bad records are discarded. If storage fails, rewards and records work for the session with visible feedback. These are local personal records, not an online leaderboard.
 
 ## Driving school and landing guidance
 
@@ -123,7 +141,7 @@ Each scored run takes the next challenge at its start. Reach the target within t
 | Keep the rhythm | Reach a 4× combo | 180 CR |
 | Kilometre club | Travel 1,000 m | 250 CR |
 
-Every finished scored run earns **1 credit per full 20 metres**, **8 per cleanly landed stunt**, and **2 per close call**, plus its challenge bonus. The results screen breaks down these rewards. Base rewards continue after all six challenges. Credits are in-game points with no real-money purchases. The wallet is capped at 999,999 credits. Practice, driving school, returning to the menu and restarting an unfinished run award no credits or challenge bonuses.
+Every finished highway scored run earns **1 credit per full 20 metres**, **8 per cleanly landed stunt**, and **2 per close call**, plus its challenge bonus. The results screen breaks down these rewards. Base rewards continue after all six challenges. Credits are in-game points with no real-money purchases. The wallet is capped at 999,999 credits. Practice, driving school, returning to the menu and restarting an unfinished run award no credits or challenge bonuses.
 
 The wallet, owned colours, equipped colour, owned vehicles, selected vehicle and completed challenges save together under `boostline.progress.v1` in localStorage. They belong to the current browser and origin; another address, port or device has its own progress. There is no account sync. The profile payload is now version 2; version 1 saves migrate with their credits, paints and completed challenges intact and the Vector Pickup selected. The storage key stays the same. Unknown or unowned car selections fall back to the starter. Bad or unsupported saved data is recovered safely. If browser storage is blocked or full, progress and purchases work for the current session, with a visible message; reloading may lose changes that could not be saved. These local saves are not tamper-proof competitive records.
 
@@ -170,10 +188,15 @@ The simulation runs independently of the renderer so movement, collisions, traff
 
 ## Verification
 
-The v0.4.0 build passes **67 automated tests** across eight test files, plus TypeScript checking and the production build. Tests cover core movement/scoring, input and lessons, traffic/collision rules, ghost replay, effects/settings/audio calculations, progression/purchases, directional jets, seven model envelopes, vehicle tuning, and profile migration. Browser checks cover home arrow wrapping, locked-car start guards, one-time unlock charges, saved selections, garage/home synchronization, session-only storage, idle preview rendering and touch targets in four phone layouts. Existing v0.3 checks also cover actual multi-touch jet firing, all garage purchases, run selection boundaries and replay models. Physical-phone testing remains separate from browser emulation.
+The v0.5.0 build passes **77 automated tests** across nine source files, plus TypeScript checking and the production build. New tests cover ramp climb/launch and edge exits, interpolated ring crossings, clean/rough/crash banking, pause/reset/finish rules, all seven cars completing all eight rings, one-time rewards, wallet caps, separate records and highway ghost isolation. Existing gameplay, traffic, tutorial, garage and rendering tests still pass.
+
+A browser playthrough using actual touch inputs completed the 1.2 km course with 8/8 rings, a Gold finish and 68 credits, then verified persistence, no duplicate rewards, restart/home behavior, deferred car changes and separation from highway records. Four phone layouts (320×568, 390×844, 568×320 and 844×390), desktop keyboard entry/pause and a full completion with blocked storage were checked without page/console errors. Physical-phone performance, heat and comfort still need real-device playtesting.
 
 ## Structure
 
+- `src/game/stunt-route.ts`: fixed course, ramp/ring state, medals and validated per-car records.
+- `src/game/stunt-scenery.ts`: instanced ramps, rings, target markers and finish arch.
+- `src/game/stunt-route.test.ts`: course physics, landing/reward/save boundaries and all-car reachability.
 - `src/game/simulation.ts`: gameplay state and fixed-step rules, independent of graphics.
 - `src/game/collision.ts`: rotating body boxes and swept collision checks.
 - `src/game/traffic.ts`: seeded traffic rows and spacing.
@@ -203,6 +226,6 @@ The v0.4.0 build passes **67 automated tests** across eight test files, plus Typ
 
 ## Data and assets
 
-Models are generated in code. The start-screen showroom redraws only when the car, paint or size changes, caps pixel ratio at 1.5 and lazily caches up to seven models. It uses a second WebGL context and falls back to a static silhouette if that context cannot be created. No external game assets or reference-video footage are included. Barlow Condensed and DM Sans are bundled locally through Fontsource, with system-font fallbacks. Best score, distance ghost, ghost visibility, graphics preferences, sound preference, tutorial completion and career/garage progress use localStorage; no data is sent to a game backend.
+Models are generated in code. The start-screen showroom redraws only when the car, paint or size changes, caps pixel ratio at 1.5 and lazily caches up to seven models. It uses a second WebGL context and falls back to a static silhouette if that context cannot be created. No external game assets or reference-video footage are included. Barlow Condensed and DM Sans are bundled locally through Fontsource, with system-font fallbacks. Best score, distance ghost, ghost visibility, graphics preferences, sound preference, tutorial completion, per-car stunt-route records and career/garage progress use localStorage; no data is sent to a game backend.
 
 The `.local/` directory is intentionally ignored by Git, blocked by the Vite development server and absent from the build output. It is reserved for personal notes and local verification artifacts. Do not force-add its contents or copy it into `public/`.

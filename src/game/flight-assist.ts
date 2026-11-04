@@ -11,7 +11,7 @@ export function flightAssist(sim: Simulation, slam: boolean) {
     return { tone: low ? 'warning' : 'rotating', label: low ? 'MORE AIRTIME' : 'ROTATING',
       hint: low ? 'Hold flight to finish the rotation' : 'Finish the rotation before touchdown', color: low ? 0xff9b75 : 0xffd684 } as const;
   }
-  if (sim.pendingTricks > 0) return { tone: 'ready', label: `${sim.pendingLandingPoints.toLocaleString('en-US')} TO BANK`,
+  if (sim.pendingLandingPoints > 0) return { tone: 'ready', label: `${sim.pendingLandingPoints.toLocaleString('en-US')} TO BANK`,
     hint: 'Release flight for a natural landing', color: 0xd6ff78 } as const;
   return { tone: 'neutral', label: 'AIRBORNE', hint: 'Try a flip or roll while you have height', color: 0xe5f0e8 } as const;
 }

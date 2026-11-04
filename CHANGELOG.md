@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.0 — Stunt Route — 2026-11-04
+
+- Added a separate 1.2 km traffic-free route with eight ramp/ring pairs, a finish arch and the selected garage car.
+- Added physical ramp climbing, automatic energy-free launches, edge exits and swept ring-centre detection.
+- Banked ring bonuses only on clean landings; rough landings, crashes and airborne finishes discard pending bonuses.
+- Added lane/distance guidance, ring status dots, completion medals and separate per-car personal records.
+- Awarded 20 finish credits plus 6 per banked ring once per completed route; kept highway challenges, best score and ghosts separate.
+- Added bounded instanced course rendering, ramp/ring/finish audio cues, mobile layouts and session-only storage fallback.
+- Added ten focused tests, including all seven cars completing all eight rings; verified the course through browser touch inputs and four phone layouts.
+
 ## v0.4.0 — Start-screen collection and redesigned cars — 2026-10-29
 
 - Added < / > car browsing before a run, with keyboard arrows, a lit 3D preview, performance summary and saved owned-car selection.

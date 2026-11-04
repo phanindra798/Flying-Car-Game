@@ -507,3 +507,37 @@ h2 { font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif; font-s
   #starting-car-state { font-size: 9px; }
   .starting-car-footer { gap: 7px; }
 }
+
+/* Stunt route entry and compact, non-obstructing course guidance. */
+.car-selector { grid-row: 1 / 9; }
+.stunt-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; width: 100%; padding: 10px 14px; border: 1px solid #6ee1ec65; border-radius: 8px; color: #ddfbff; background: #153f49e8; text-align: left; }
+.stunt-entry b { display: block; font-size: 11px; letter-spacing: 1.5px; color: #8eefff; }
+.stunt-entry small { display: block; margin-top: 4px; font-size: 10px; color: #cfdfd9; }
+.stunt-entry > span:last-child { font-size: 24px; }
+.stunt-entry:hover { background: #24535c; }
+.stunt-entry:disabled { opacity: .45; cursor: not-allowed; }
+.route-hud { margin-top: 10px; padding: 9px 12px; max-width: 340px; border-left: 2px solid #70e7f4; background: #102c38d9; border-radius: 0 8px 8px 0; }
+.route-hud > strong, .route-hud > span { display: block; font-size: 10px; line-height: 1.5; }
+.route-hud > strong { color: #91f0ff; letter-spacing: .7px; }
+#route-hint { margin-top: 3px; max-width: 225px; color: #e0ebe6; }
+#route-banked { color: #d6ff78; font-size: 9px; }
+.route-progress { display: flex; gap: 6px; margin: 7px 0; }
+.route-progress i { display: block; width: 9px; height: 9px; border: 1px solid #74bfc8; border-radius: 50%; }
+.route-progress i[data-state='pending'] { background: #8eefff; }
+.route-progress i[data-state='banked'] { background: #d6ff78; border-color: #d6ff78; }
+.route-progress i[data-state='missed'], .route-progress i[data-state='lost'] { background: #ff9b75; border-color: #ff9b75; }
+.route-result { color: #a7e7ef; font-size: 12px; line-height: 1.6; }
+#app[data-mode='stunt'] #pause-panel [data-ghost-toggle] { display: none; }
+@media (max-width: 720px) and (orientation: portrait) {
+  .welcome .stunt-entry { flex: none; min-height: 52px; }
+  .route-hud { max-width: 215px; padding: 7px 9px; }
+  .route-hud > strong, #route-hint { font-size: 9px; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .stunt-entry { min-height: 48px; padding: 6px 9px; }
+  .stunt-entry small { font-size: 9px; }
+  .route-hud { max-width: 220px; margin-top: 4px; padding: 4px 8px; }
+  .route-hud > strong, #route-hint, #route-banked { font-size: 8px; }
+  .route-progress { margin: 4px 0; gap: 5px; }
+  .route-progress i { width: 6px; height: 6px; }
+}

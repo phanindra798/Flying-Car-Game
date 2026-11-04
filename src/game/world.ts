@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { StuntScenery } from './stunt-scenery';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LANES, VEHICLES, type GameEvent, type Simulation, type Traffic } from './simulation';
 import { flightAssist } from './flight-assist';
@@ -17,6 +18,7 @@ export class World {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(57, 1, 0.1, 1000);
+  private readonly stuntScenery = new StuntScenery();
   private readonly effects = new GameEffects(this.scene);
   private graphicsSettings: GraphicsSettings = { ...DEFAULT_SETTINGS };
   private readonly car = new THREE.Group();
@@ -79,6 +81,7 @@ export class World {
     sun.position.set(-100, 47, -370);
     this.scene.add(sun);
     this.createLandscape();
+    this.scene.add(this.stuntScenery);
 
     this.box(15.8, 0.3, ROAD_LENGTH, 0x424c50, 0, -0.17, -ROAD_LENGTH / 2 + 20);
     for (const side of [-1, 1]) {
@@ -226,6 +229,7 @@ export class World {
     this.reducedMotion = profile.reduceMotion; this.effects.configure(profile.particleLimit);
     this.resize();
   }
+  inspectRoute() { return this.stuntScenery.inspect(); }
   inspectEffects() { return { ...this.effects.inspect(), jets: this.jets.inspect(), reducedMotion: this.reducedMotion, fov: this.camera.fov }; }
 
   readonly resize = () => {
@@ -296,6 +300,7 @@ export class World {
 
   render(sim: Simulation, dt: number, _time: number, slam = false, threat: TrafficThreat | null = null, ghost: GhostPose | null = null) {
     const distance = sim.distance;
+    this.stuntScenery.update(sim);
     for (let i = 0; i < 126; i++) {
       this.dummy.position.set([-3.5, 0, 3.5][i % 3], 0.018, 20 - Math.floor(i / 3) * 12 + distance % 12);
       this.dummy.scale.setScalar(1); this.dummy.rotation.set(0, 0, 0); this.dummy.updateMatrix();
@@ -330,7 +335,7 @@ export class World {
     this.shadow.position.x = sim.x; this.shadow.position.z = 3;
     this.shadow.scale.setScalar(1 + sim.height * 0.04);
     (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.28 / (1 + sim.height * 0.17);
-    this.landingMarker.visible = sim.airborne && sim.phase !== 'ready' && sim.phase !== 'crashed';
+    this.landingMarker.visible = sim.airborne && (sim.phase === 'playing' || sim.phase === 'paused');
     this.landingMarker.position.set(sim.x, 0.04, 3);
     this.landingMarker.scale.set(1.35, 2.5, 1);
     this.landingMarker.material.color.setHex(flightAssist(sim, slam).color);

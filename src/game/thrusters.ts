@@ -12,7 +12,7 @@ export const JET_COLORS = { lift: 0x65dcff, boost: 0xd6ff78 };
 export const DOWN = new THREE.Vector3(0, -1, 0);
 /** Shared by the vehicle and detached exhaust so steering, flips and rolls stay aligned. */
 export function vehicleRotation(sim: Simulation, target: THREE.Euler) {
-  return target.set(sim.pitch, -(LANES[sim.lane] - sim.x) * 0.075, sim.roll);
+  return target.set(sim.pitch + sim.rampPitch, -(LANES[sim.lane] - sim.x) * 0.075, sim.roll);
 }
 
 /** Visual-only launch pulse: even a short jump tap fires the underbody jets. */

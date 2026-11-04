@@ -1,3 +1,4 @@
+import { StuntRoute, RAMP_HEIGHT, RAMP_LENGTH, RING_POINTS, ROUTE_LENGTH } from './stunt-route';
 import { getCar, type CarId } from './garage-cars';
 import { carBounds, sweptCarHitsBox, type Vec3 } from './collision';
 import { TrafficDirector, TRAFFIC_SPEED } from './traffic';
@@ -5,8 +6,8 @@ export { segmentHitsBox } from './collision';
 
 export const LANES = [-5.25, -1.75, 1.75, 5.25] as const;
 export const FIXED_STEP = 1 / 60;
-export type Phase = 'ready' | 'playing' | 'paused' | 'crashed';
-export type Mode = 'run' | 'practice';
+export type Phase = 'ready' | 'playing' | 'paused' | 'crashed' | 'finished';
+export type Mode = 'run' | 'practice' | 'stunt';
 export type TrickKind = 'flip' | 'roll-left' | 'roll-right';
 export interface HeldInput { thrust: boolean; boost: boolean; slam: boolean }
 export const NO_INPUT: HeldInput = { thrust: false, boost: false, slam: false };
@@ -15,7 +16,7 @@ export interface Traffic {
   kind: 'car' | 'van' | 'truck'; color: number; nearMissChecked: boolean;
 }
 export interface GameEvent {
-  kind: 'jump' | 'trick' | 'landing' | 'near' | 'crash';
+  kind: 'jump' | 'trick' | 'landing' | 'near' | 'crash' | 'ramp' | 'ring' | 'miss' | 'finish';
   title: string; detail: string;
   landing?: { quality: 'clean' | 'rough' | 'unfinished' | 'plain'; points: number; tricks: number };
 }
@@ -52,6 +53,8 @@ export class Simulation {
   tricksLanded = 0;
   pendingTricks = 0;
   crashReason = '';
+  route: StuntRoute | null = null;
+  rampPitch = 0;
   traffic: Traffic[] = [];
   events: GameEvent[] = [];
   private stunt: Stunt | null = null;
@@ -61,13 +64,13 @@ export class Simulation {
   private vehicleId = 0;
 
   get score() { return Math.floor(this.distance * 1.4) + this.banked; }
-  get airborne() { return this.height > 0.001 || this.verticalSpeed > 0; }
+  get airborne() { return this.route?.riding == null && (this.height > 0.001 || this.verticalSpeed > 0); }
   get stuntRemaining() { return this.stunt ? Math.max(0, this.stunt.duration - this.stunt.time) : 0; }
-  get pendingLandingPoints() { return this.pendingTricks > 0 ? (this.pendingTricks * 120 + 50) * this.combo : 0; }
+  get pendingLandingPoints() { return ((this.pendingTricks > 0 ? this.pendingTricks * 120 + 50 : 0) + (this.route?.pending ?? 0) * RING_POINTS) * this.combo; }
 
   start(mode: Mode = 'run', seed = 42, carId: CarId = 'vector') {
     this.car = getCar(carId);
-    this.mode = mode;
+    this.mode = mode; this.route = mode === 'stunt' ? new StuntRoute() : null; this.rampPitch = 0;
     this.phase = 'playing';
     this.x = LANES[1]; this.lane = 1;
     this.height = 0; this.verticalSpeed = 0; this.speed = this.car.cruise;
@@ -91,7 +94,7 @@ export class Simulation {
   }
 
   jump() {
-    if (this.phase !== 'playing' || this.airborne || this.energy < 7) return false;
+    if (this.phase !== 'playing' || this.airborne || this.route?.riding != null || this.energy < 7) return false;
     this.verticalSpeed = this.car.jump;
     this.energy -= 7;
     this.groundedTime = 0;
@@ -130,16 +133,23 @@ export class Simulation {
     this.distance += this.speed * dt;
 
     const wasAirborne = this.airborne;
-    this.thrustActive = input.thrust && wasAirborne && this.energy > 0 && !input.slam;
+    const before = { x: oldX, height: oldHeight, distance: oldDistance };
+    const ride = this.route?.ride(before, this, !wasAirborne) ?? null;
+    this.rampPitch = ride && !ride.launch ? Math.atan2(RAMP_HEIGHT, RAMP_LENGTH) : 0;
+    if (ride) {
+      this.height = ride.height; this.verticalSpeed = ride.launch ? 10 : 0; this.groundedTime = 0;
+      if (ride.launch) this.events.push({ kind: 'ramp', title: 'RAMP LAUNCH', detail: 'Aim through the ring · hold flight for extra height' });
+    }
+    this.thrustActive = input.thrust && !ride && wasAirborne && this.energy > 0 && !input.slam;
     let consumption = this.boostActive ? this.car.boostDrain : 0;
-    if (wasAirborne) {
+    if (!ride && (wasAirborne || this.airborne)) {
       this.groundedTime = 0;
       consumption += this.thrustActive ? this.car.flightDrain : 0;
       const acceleration = -19 + (this.thrustActive ? this.car.lift : 0) - (input.slam ? 35 : 0);
       this.verticalSpeed = clamp(this.verticalSpeed + acceleration * dt, -24, 11);
       this.height += this.verticalSpeed * dt;
       if (this.height > 9) { this.height = 9; this.verticalSpeed = Math.min(0, this.verticalSpeed); }
-    } else {
+    } else if (!ride) {
       this.groundedTime += dt;
       if (!this.boostActive && this.groundedTime > 0.65) this.energy += this.car.recharge * dt;
     }
@@ -159,7 +169,7 @@ export class Simulation {
       }
     }
 
-    const touchesRoad = wasAirborne && this.height <= 0;
+    const touchesRoad = !ride && (wasAirborne || oldHeight > 0) && this.height <= 0;
     if (touchesRoad) this.height = 0;
 
     const bounds = carBounds(this);
@@ -185,8 +195,19 @@ export class Simulation {
     }
     // A touchdown only earns points after traffic contact has been ruled out.
     if (this.phase !== 'playing') return;
+    if (this.route) for (const crossing of this.route.cross(before, this)) {
+      this.events.push(crossing.hit
+        ? { kind: 'ring', title: 'RING COLLECTED', detail: `${this.pendingLandingPoints} points waiting · land cleanly to bank` }
+        : { kind: 'miss', title: 'RING MISSED', detail: 'Keep going · line up with the next ramp' });
+    }
     if (touchesRoad) this.land();
     if (this.phase !== 'playing') return;
+    if (this.mode === 'stunt' && this.distance >= ROUTE_LENGTH) {
+      this.route!.land(false); this.pendingTricks = 0;
+      this.phase = 'finished'; this.thrustActive = this.boostActive = false;
+      this.events.push({ kind: 'finish', title: 'ROUTE COMPLETE', detail: 'Your stunt route is complete.' });
+      return;
+    }
     this.traffic = this.traffic.filter(v => v.distance > this.distance - 35);
     if (this.mode === 'run') {
       const flowOffset = TRAFFIC_SPEED * this.elapsed;
@@ -206,16 +227,17 @@ export class Simulation {
     this.verticalSpeed = 0;
     const upright = Math.cos(this.pitch) * Math.cos(this.roll) > 0.65;
     const unfinished = !upright || this.stunt !== null;
-    if (unfinished && this.mode === 'run') {
+    if (unfinished && this.mode !== 'practice') {
       this.crash('Give your rotation a little more airtime before landing.');
       return;
     }
+    const pendingRings = this.route?.pending ?? 0;
     this.pitch = 0; this.roll = 0; this.stunt = null;
     // A normal fall from the flight ceiling is safe; a hard slam is not.
     if (unfinished) {
       this.combo = 1;
       this.events.push({ kind: 'landing', title: 'ROTATION UNFINISHED', detail: 'Give your next stunt a little more airtime', landing: { quality: 'unfinished', points: 0, tricks: 0 } });
-    } else if (impact < 20 && this.pendingTricks > 0) {
+    } else if (impact < 20 && (this.pendingTricks > 0 || pendingRings > 0)) {
       const points = this.pendingLandingPoints;
       this.banked += points;
       this.tricksLanded += this.pendingTricks;
@@ -229,12 +251,13 @@ export class Simulation {
     } else {
       this.events.push({ kind: 'landing', title: 'BACK ON THE ROAD', detail: 'Try a flip or roll during your next jump', landing: { quality: 'plain', points: 0, tricks: 0 } });
     }
+    this.route?.land(!unfinished && impact < 20);
     this.pendingTricks = 0;
     this.groundedTime = 0;
   }
 
   private crash(reason: string) {
-    this.phase = 'crashed'; this.crashReason = reason;
+    this.phase = 'crashed'; this.crashReason = reason; this.route?.land(false);
     this.pendingTricks = 0; this.thrustActive = false; this.boostActive = false;
     this.events.push({ kind: 'crash', title: 'RUN COMPLETE', detail: reason });
   }

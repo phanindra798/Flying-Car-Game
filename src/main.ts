@@ -1,4 +1,5 @@
 import './style.css';
+import { ROUTE_ID, ROUTE_LENGTH, ROUTE_RECORD_KEY, ROUTE_STATIONS, parseRouteRecords, betterRoute, routeMedal } from './game/stunt-route';
 import { CarShowcase } from './game/car-showcase';
 import { GARAGE_CARS, getCar, carPreview, type CarId } from './game/garage-cars';
 import { PROGRESS_KEY, PAINTS, CHALLENGES, MAX_CREDITS, parseProfile, usePaint, useCar, nextChallenge, RunProgress, type RunReward } from './game/progression';
@@ -22,7 +23,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="#" aria-label="BOOSTLINE home"><span class="brand-mark">B<span>↗</span></span><span>BOOSTLINE<small>FIND YOUR LINE.</small></span></a>
     <div class="route-badge"><span class="live-dot"></span> PACIFIC COAST <span class="route-number">/ 01</span></div>
-    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.4</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
+    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.5</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
   </header>
 
   <main>
@@ -37,6 +38,7 @@ app.innerHTML = `
         <div class="starting-car-footer"><span id="starting-car-state" role="status"></span><button id="starting-car-unlock" type="button" hidden></button></div>
       </section>
       <div class="start-actions"><button id="start" class="primary-button">Start your run ${arrow}</button><button id="practice" class="text-button">Practice flight <span>↗</span></button></div>
+      <button id="stunt-start" class="stunt-entry"><span><b>STUNT ROUTE</b><small>8 ramps · 8 rings · finish to earn credits</small></span><span aria-hidden="true">↗</span></button>
       <button id="learn" class="learn-button"><span aria-hidden="true">◎</span><span id="learn-label">First drive? Learn the moves</span><span aria-hidden="true">↗</span></button>
       <div class="ghost-setting"><button data-ghost-toggle aria-pressed="true">Ghost on</button><span id="ghost-home-copy">Finish a run to save a distance ghost.</span></div>
       <div class="personal-best"><span class="best-icon">✧</span><div>YOUR PERSONAL BEST <strong id="home-best">—</strong></div><span class="best-note">Saved on this device</span></div>
@@ -51,7 +53,7 @@ app.innerHTML = `
     </aside>
 
     <section id="hud" class="hud" aria-label="Run statistics" hidden>
-      <div class="score-block"><span class="hud-label" id="run-label">CURRENT RUN</span><strong id="score">000000</strong><div class="score-meta"><span id="distance">0 M</span><span id="combo">1× COMBO</span></div><div id="challenge-hud" class="challenge-hud" hidden></div><div id="ghost-status" class="ghost-status" hidden></div><div id="traffic-warning" class="traffic-warning" role="status" hidden><span id="traffic-message"></span><span id="traffic-gap" aria-hidden="true"></span></div></div>
+      <div class="score-block"><span class="hud-label" id="run-label">CURRENT RUN</span><strong id="score">000000</strong><div class="score-meta"><span id="distance">0 M</span><span id="combo">1× COMBO</span></div><div id="route-hud" class="route-hud" hidden><strong id="route-next"></strong><span id="route-hint"></span><div id="route-progress" class="route-progress" aria-label="Stunt ring progress"></div><span id="route-banked"></span></div><div id="challenge-hud" class="challenge-hud" hidden></div><div id="ghost-status" class="ghost-status" hidden></div><div id="traffic-warning" class="traffic-warning" role="status" hidden><span id="traffic-message"></span><span id="traffic-gap" aria-hidden="true"></span></div></div>
       <div class="speed-block"><span class="hud-label">GROUND SPEED</span><strong id="speed">0 <small>KM/H</small></strong><span id="flight-state" class="flight-state">ON THE ROAD</span><span id="flight-detail" class="flight-detail"></span><span id="fps-counter" class="fps-counter" hidden></span></div>
     </section>
 
@@ -69,13 +71,13 @@ app.innerHTML = `
 
     <section id="pause-panel" class="modal-card" aria-labelledby="pause-title" hidden><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Road's waiting.</h2><p>Your run is paused. Pick up right where you left off.</p><button id="resume" class="primary-button">Back to the road ${arrow}</button><button id="pause-restart" class="secondary-button">Restart run</button><button data-ghost-toggle class="secondary-button" aria-pressed="true">Ghost on</button><button id="pause-garage" class="secondary-button" data-garage-open>Garage & challenges</button><button id="pause-home" class="text-button">Main menu</button></section>
 
-    <section id="results" class="modal-card results" aria-labelledby="results-title" hidden><span class="eyebrow" id="record-label">RUN COMPLETE</span><h2 id="results-title">One more run?</h2><p id="crash-reason"></p><div class="result-score"><span>FINAL SCORE</span><strong id="final-score">0</strong></div><div class="result-stats"><div><strong id="final-distance">0 m</strong><span>DISTANCE</span></div><div><strong id="final-combo">1×</strong><span>BEST COMBO</span></div><div><strong id="final-tricks">0</strong><span>LANDED TRICKS</span></div></div><p id="ghost-result" class="ghost-result" role="status"></p><div id="run-reward" class="run-reward" hidden><strong id="reward-total"></strong><p id="reward-breakdown"></p><p id="reward-challenge"></p><span id="reward-storage"></span></div><button id="retry" class="primary-button">Try again <span>R ${arrow}</span></button><button id="results-garage" class="secondary-button" data-garage-open>Visit garage</button><button id="results-home" class="text-button">Back to main menu</button></section>
+    <section id="results" class="modal-card results" aria-labelledby="results-title" hidden><span class="eyebrow" id="record-label">RUN COMPLETE</span><h2 id="results-title">One more run?</h2><p id="crash-reason"></p><div class="result-score"><span>FINAL SCORE</span><strong id="final-score">0</strong></div><div class="result-stats"><div><strong id="final-distance">0 m</strong><span>DISTANCE</span></div><div><strong id="final-combo">1×</strong><span>BEST COMBO</span></div><div><strong id="final-tricks">0</strong><span>LANDED TRICKS</span></div></div><p id="route-result" class="route-result" hidden></p><p id="ghost-result" class="ghost-result" role="status"></p><div id="run-reward" class="run-reward" hidden><strong id="reward-total"></strong><p id="reward-breakdown"></p><p id="reward-challenge"></p><span id="reward-storage"></span></div><button id="retry" class="primary-button">Try again <span>R ${arrow}</span></button><button id="results-garage" class="secondary-button" data-garage-open>Visit garage</button><button id="results-home" class="text-button">Back to main menu</button></section>
 
     <dialog id="garage" class="help-dialog garage-dialog" aria-labelledby="garage-title">
       <div class="help-heading"><span class="eyebrow">YOUR COAST. YOUR COLOURS.</span><button id="garage-close" class="icon-button" aria-label="Close garage">×</button></div>
       <div class="garage-title-row"><h2 id="garage-title">Make it yours.</h2><strong id="garage-balance" aria-label="Credit balance">0 CR</strong></div>
       <section class="garage-challenge" aria-labelledby="challenge-title"><span id="challenge-count" class="eyebrow"></span><h3 id="challenge-title"></h3><p id="challenge-detail"></p><div class="challenge-track" id="challenge-meter" role="progressbar" aria-label="Current challenge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div><div class="challenge-summary"><span id="challenge-progress"></span><strong id="challenge-bonus"></strong></div></section>
-      <p class="garage-rules">Earn credits in scored runs. Each run has one challenge; claim rewards when it ends in a crash. Practice and restarts earn nothing.</p>
+      <p class="garage-rules">Earn credits in scored runs. Each run has one challenge; claim rewards when it ends in a crash. Finish Stunt Route for 20 CR plus 6 per banked ring. Practice, abandoned routes and restarts earn nothing; highway challenges stay in scored traffic runs.</p>
       <div class="garage-shop">
         <div class="garage-tabs" role="group" aria-label="Garage category"><button type="button" data-garage-view="cars" aria-pressed="true" aria-controls="car-grid">Cars <span>7</span></button><button type="button" data-garage-view="paints" aria-pressed="false" aria-controls="paint-grid">Paints <span>4</span></button></div>
         <div id="car-grid" class="car-grid" aria-label="Vehicle collection">${GARAGE_CARS.map(car => `<article class="paint-card car-card" data-car-card="${car.id}"><div class="paint-preview">${carPreview(car)}</div><span class="car-role">${car.role}</span><h3>${car.name}</h3><p class="car-description">${car.note}</p><dl class="car-stats"><div><dt>BOOST</dt><dd>${Math.round((car.cruise + car.boost) * 3.6)} km/h</dd></div><div><dt>FLIGHT</dt><dd>${(93 / car.flightDrain).toFixed(1)} s</dd></div><div><dt>JUMP</dt><dd>${car.jumpLabel}</dd></div><div><dt>AGILITY</dt><dd>${car.agility}</dd></div></dl><button type="button" data-car="${car.id}"></button></article>`).join('')}</div>
@@ -94,7 +96,7 @@ app.innerHTML = `
       <p id="settings-status" role="status">Changes apply immediately and save on this browser.</p><button id="settings-done" class="primary-button">Done ${arrow}</button>
     </dialog>
 
-    <dialog id="help" class="help-dialog"><div class="help-heading"><span class="eyebrow">THE DRIVER'S GUIDE</span><button id="help-close" class="icon-button" aria-label="Close controls">×</button></div><h2>Learn your moves.</h2><dl><div><dt><kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd></dt><dd>Change lane</dd></div><div><dt><kbd>SPACE</kbd></dt><dd>Jump · hold to fire the underbody lift jets</dd></div><div><dt><kbd>SHIFT</kbd></dt><dd>Hold to fire the rear boosters</dd></div><div><dt><kbd>F</kbd></dt><dd>Front flip while airborne</dd></div><div><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Barrel roll left / right</dd></div><div><dt><kbd>↓</kbd> / <kbd>S</kbd></dt><dd>Slam downward</dd></div><div><dt><kbd>ESC</kbd> / <kbd>P</kbd></dt><dd>Pause / resume</dd></div><div><dt><kbd>R</kbd></dt><dd>Restart current mode</dd></div></dl><p>Land a completed trick to bank points. Energy refills on the road. Practice flight has an empty highway. The cyan ghost replays your longest finished run; you can drive through it. Ghosts are saved on this browser for runs up to 10 minutes. Toggle the ghost on the home or pause screen.</p><button id="help-done" class="primary-button">Got it ${arrow}</button></dialog>
+    <dialog id="help" class="help-dialog"><div class="help-heading"><span class="eyebrow">THE DRIVER'S GUIDE</span><button id="help-close" class="icon-button" aria-label="Close controls">×</button></div><h2>Learn your moves.</h2><dl><div><dt><kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd></dt><dd>Change lane</dd></div><div><dt><kbd>SPACE</kbd></dt><dd>Jump · hold to fire the underbody lift jets</dd></div><div><dt><kbd>SHIFT</kbd></dt><dd>Hold to fire the rear boosters</dd></div><div><dt><kbd>F</kbd></dt><dd>Front flip while airborne</dd></div><div><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Barrel roll left / right</dd></div><div><dt><kbd>↓</kbd> / <kbd>S</kbd></dt><dd>Slam downward</dd></div><div><dt><kbd>ESC</kbd> / <kbd>P</kbd></dt><dd>Pause / resume</dd></div><div><dt><kbd>R</kbd></dt><dd>Restart current mode</dd></div></dl><p>Land a completed trick to bank points. Energy refills on the road. Practice flight has an empty highway. Stunt Route has eight ramps and rings: drive onto a ramp for automatic launch, aim the centre of your car through each ring, and land cleanly to bank its points. Higher rings need held flight. Missing a ring is safe; unfinished rotations still crash. Finish the route to earn credits. Bronze needs 4 banked rings, Silver 6 and Gold all 8. The cyan ghost replays your longest finished run; you can drive through it. Ghosts are saved on this browser for runs up to 10 minutes. Toggle the ghost on the home or pause screen.</p><button id="help-done" class="primary-button">Got it ${arrow}</button></dialog>
   </main>
 
   <footer class="bottom-bar"><button id="garage-open" class="garage-open" data-garage-open>GARAGE <span id="garage-wallet">0 CR</span><span aria-hidden="true">↗</span></button><div class="control-strip"><span><kbd>← →</kbd> STEER</span><span><kbd>SPACE</kbd> FLY</span><span><kbd>F</kbd> FLIP</span><span><kbd>Q E</kbd> ROLL</span><span><kbd>SHIFT</kbd> BOOST</span></div><button id="footer-help" class="footer-help">CONTROLS <span>?</span></button></footer>
@@ -132,6 +134,9 @@ let resumeAfterGarage = false;
 let lastReward: RunReward | null = null;
 try { profile = parseProfile(localStorage.getItem(PROGRESS_KEY)); } catch { progressStored = false; }
 let previewCar: CarId = profile.selectedCar;
+let routeRecords = parseRouteRecords(null), routeStored = true;
+try { routeRecords = parseRouteRecords(localStorage.getItem(ROUTE_RECORD_KEY)); } catch { routeStored = false; }
+$('route-progress').innerHTML = ROUTE_STATIONS.map(station => `<i data-ring="${station.id}" aria-label="Ring ${station.id + 1}: ahead"></i>`).join('');
 const systemMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let graphics: GraphicsSettings = parseSettings(null);
 try { graphics = parseSettings(localStorage.getItem(SETTINGS_KEY)); } catch { /* Defaults work without storage. */ }
@@ -211,7 +216,7 @@ function start(mode: Mode = 'run', guided = false) {
 function restart() { start(sim.mode, school.active); }
 
 function syncScreens() {
-  app.dataset.phase = sim.phase;
+  app.dataset.phase = sim.phase; app.dataset.mode = sim.mode;
   app.dataset.school = school.active ? 'active' : 'off';
   $('welcome').hidden = sim.phase !== 'ready';
   if (sim.phase === 'ready') { previewCar = profile.selectedCar; syncCarSelector(); }
@@ -222,12 +227,12 @@ function syncScreens() {
   $('pause-panel').hidden = sim.phase !== 'paused' || school.completed;
   $('school-complete').hidden = !school.completed;
   $('lesson-panel').hidden = !school.active || school.completed || sim.phase !== 'playing';
-  $('results').hidden = sim.phase !== 'crashed';
+  $('results').hidden = sim.phase !== 'crashed' && sim.phase !== 'finished';
   $('touch-controls').hidden = sim.phase !== 'playing';
-  $('run-label').textContent = school.active ? 'DRIVING SCHOOL · VECTOR PICKUP' : `${sim.mode === 'practice' ? 'PRACTICE' : 'RUN'} · ${getCar(sim.carId).name.toUpperCase()}`;
+  $('run-label').textContent = school.active ? 'DRIVING SCHOOL · VECTOR PICKUP' : `${sim.mode === 'practice' ? 'PRACTICE' : sim.mode === 'stunt' ? 'STUNT ROUTE' : 'RUN'} · ${getCar(sim.carId).name.toUpperCase()}`;
   syncLesson();
   if (sim.phase === 'paused') $(school.completed ? 'school-race' : 'resume').focus();
-  if (sim.phase === 'crashed') $('retry').focus();
+  if (sim.phase === 'crashed' || sim.phase === 'finished') $('retry').focus();
 }
 
 function togglePause() {
@@ -247,6 +252,7 @@ function home() {
 
 $('start').addEventListener('click', () => start());
 $('practice').addEventListener('click', () => start('practice'));
+$('stunt-start').addEventListener('click', () => start('stunt'));
 $('learn').addEventListener('click', () => start('practice', true));
 $('lesson-skip').addEventListener('click', () => { school.end(); clearInput(); syncScreens(); focusRoad(); });
 $('school-race').addEventListener('click', () => start());
@@ -290,7 +296,7 @@ window.addEventListener('keydown', event => {
   if (boundKeys.has(event.code)) event.preventDefault();
   if (event.repeat) return;
   if (sim.phase === 'ready' && (event.code === 'ArrowLeft' || event.code === 'ArrowRight')) { browseCar(event.code === 'ArrowLeft' ? -1 : 1); return; }
-  if ((event.code === 'Space' || event.code === 'Enter') && (sim.phase === 'ready' || sim.phase === 'crashed')) { start(sim.phase === 'ready' ? 'run' : sim.mode); return; }
+  if ((event.code === 'Space' || event.code === 'Enter') && (sim.phase === 'ready' || sim.phase === 'crashed' || sim.phase === 'finished')) { start(sim.phase === 'ready' ? 'run' : sim.mode); return; }
   if (event.code === 'Escape' || event.code === 'KeyP') { togglePause(); return; }
   if (event.code === 'KeyR' && sim.phase !== 'ready') { restart(); return; }
   if (sim.phase !== 'playing') return;
@@ -352,6 +358,7 @@ catch {
   $('fatal-error').textContent = 'The 3D scene could not start. Try a current browser with graphics acceleration enabled, then reload.';
   $<HTMLButtonElement>('start').disabled = true;
   $<HTMLButtonElement>('practice').disabled = true;
+  $<HTMLButtonElement>('stunt-start').disabled = true;
   $<HTMLButtonElement>('learn').disabled = true;
 }
 
@@ -368,6 +375,9 @@ function syncCarSelector() {
   const unlock = $<HTMLButtonElement>('starting-car-unlock'); unlock.hidden = owned;
   unlock.textContent = `Unlock · ${car.price} CR`; unlock.disabled = profile.credits < car.price;
   $<HTMLButtonElement>('start').disabled = !world || !owned; $<HTMLButtonElement>('practice').disabled = !world || !owned;
+  $<HTMLButtonElement>('stunt-start').disabled = !world || !owned;
+  const record = routeRecords[previewCar];
+  $('stunt-start').querySelector('small')!.textContent = record ? `${routeMedal(record.rings)} · best ${number(record.score)} · ${record.rings}/8 rings` : '8 ramps · 8 rings · finish to earn credits';
   if (showcase) showcase.setCar(previewCar, color);
   else { $('car-showcase').innerHTML = carPreview(car); $('car-showcase').style.setProperty('--paint', `#${color.toString(16).padStart(6,'0')}`); }
 }
@@ -518,6 +528,17 @@ function finishSchool() {
 }
 
 function updateHud() {
+  $('route-hud').hidden = sim.mode !== 'stunt' || sim.phase !== 'playing';
+  if (sim.route && sim.phase === 'playing') {
+    const next = sim.route.next;
+    const rampAhead = next && sim.distance < next.ramp;
+    $('route-next').textContent = next ? `${rampAhead ? 'RAMP' : 'RING'} ${next.id + 1}/8 · LANE ${next.lane + 1} · ${Math.max(0, Math.ceil((rampAhead ? next.ramp : next.ring) - sim.distance))} M` : `FINISH · ${Math.max(0, Math.ceil(ROUTE_LENGTH - sim.distance))} M`;
+    $('route-hint').textContent = sim.route.pending ? 'Release flight · land cleanly to bank' : next ? next.height >= 4.8 ? 'Higher ring · hold flight after launch' : 'Drive up the ramp · aim through the diamond' : 'Land before the finish to bank your points';
+    $('route-banked').textContent = `${sim.route.banked}/8 BANKED${sim.route.pending ? ` · ${sim.route.pending} IN THE AIR` : ''}`;
+    for (const [i, state] of sim.route.rings.entries()) {
+      const dot = $('route-progress').children[i] as HTMLElement; dot.dataset.state = state; dot.setAttribute('aria-label', `Ring ${i + 1}: ${state}`);
+    }
+  }
   const target = progression.status(sim);
   $('challenge-hud').hidden = sim.mode !== 'run' || sim.phase !== 'playing';
   $('challenge-hud').textContent = target ? target.reached ? 'CHALLENGE ✓ · FINISH RUN TO CLAIM' : `${target.challenge.short} · ${number(target.value)} / ${number(target.challenge.target)}${target.challenge.metric === 'distance' ? ' M' : ''}` : 'ALL CHALLENGES COMPLETE';
@@ -573,9 +594,9 @@ function finishRun() {
   $('run-reward').hidden = !lastReward;
   if (lastReward) {
     $('reward-total').textContent = `+${number(lastReward.earned)} CR EARNED`;
-    $('reward-breakdown').textContent = `${lastReward.distance} distance · ${lastReward.stunts} stunts · ${lastReward.closeCalls} close calls${lastReward.bonus ? ` · ${lastReward.bonus} challenge` : ''}`;
+    $('reward-breakdown').textContent = sim.mode === 'stunt' ? `${lastReward.completion} CR finish · ${lastReward.rings} CR from rings` : `${lastReward.distance} distance · ${lastReward.stunts} stunts · ${lastReward.closeCalls} close calls${lastReward.bonus ? ` · ${lastReward.bonus} challenge` : ''}`;
     const next = nextChallenge(profile);
-    $('reward-challenge').textContent = lastReward.challenge ? `✓ ${lastReward.challenge.title} complete! ${next ? 'Next: ' + next.challenge.title + '.' : 'All six challenges complete.'}` : next ? `Next run: ${next.challenge.detail}` : 'All six challenges complete. Keep chasing your record.';
+    $('reward-challenge').textContent = sim.mode === 'stunt' ? 'Highway challenges continue in scored traffic runs.' : lastReward.challenge ? `✓ ${lastReward.challenge.title} complete! ${next ? 'Next: ' + next.challenge.title + '.' : 'All six challenges complete.'}` : next ? `Next run: ${next.challenge.detail}` : 'All six challenges complete. Keep chasing your record.';
     $('reward-storage').textContent = `${progressStorageCopy()}${profile.credits === MAX_CREDITS ? ' Credit balance limit reached.' : ''}`;
   }
   const candidate = recorder.finish(sim);
@@ -597,12 +618,25 @@ function finishRun() {
     best = sim.score;
     try { localStorage.setItem('boostline.best.v1', String(best)); } catch { storageAvailable = false; }
   }
-  $('record-label').textContent = sim.mode === 'practice' ? 'PRACTICE COMPLETE' : record ? 'A NEW PERSONAL BEST' : 'RUN COMPLETE';
-  $('crash-reason').textContent = sim.crashReason + (!storageAvailable ? ' This browser could not save the record.' : '');
+  $('record-label').textContent = sim.mode === 'stunt' ? sim.phase === 'finished' ? 'STUNT ROUTE COMPLETE' : 'STUNT ROUTE INTERRUPTED' : sim.mode === 'practice' ? 'PRACTICE COMPLETE' : record ? 'A NEW PERSONAL BEST' : 'RUN COMPLETE';
+  $('results-title').textContent = sim.mode === 'stunt' && sim.phase === 'finished' ? `${routeMedal(sim.route!.banked).toLowerCase()} finish.` : 'One more run?';
+  $('crash-reason').textContent = (sim.mode === 'stunt' && sim.phase === 'finished' ? `${sim.route!.banked} of 8 rings banked in ${sim.elapsed.toFixed(1)} seconds. Bronze: 4 · Silver: 6 · Gold: 8.` : sim.crashReason) + (!storageAvailable ? ' This browser could not save the record.' : '');
   $('final-score').textContent = number(sim.score);
   $('final-distance').textContent = `${number(sim.distance)} m`;
   $('final-combo').textContent = `${sim.maxCombo}×`;
   $('final-tricks').textContent = String(sim.tricksLanded);
+  $('route-result').hidden = sim.mode !== 'stunt';
+  if (sim.mode === 'stunt') {
+    if (sim.phase === 'finished') {
+      const candidate = { score: sim.score, rings: sim.route!.banked, time: sim.elapsed };
+      const improved = betterRoute(candidate, routeRecords[sim.carId]);
+      if (improved) {
+        routeRecords = { ...routeRecords, [sim.carId]: candidate };
+        try { localStorage.setItem(ROUTE_RECORD_KEY, JSON.stringify({ version: 1, course: ROUTE_ID, records: routeRecords })); routeStored = true; } catch { routeStored = false; }
+      }
+      $('route-result').textContent = `${improved ? 'New best' : 'Best'} for ${getCar(sim.carId).name}: ${number(routeRecords[sim.carId]!.score)} points. ${routeStored ? 'Saved on this browser.' : 'Session only: record could not be saved.'}`;
+    } else $('route-result').textContent = 'Reach the finish for route credits and a record. Give your next rotation more airtime.';
+  }
   clearInput(); syncScreens();
 }
 
@@ -632,7 +666,7 @@ function frame(now: number) {
     progression.onEvent(event);
     audio.cue(event);
     world?.onEvent(event, sim);
-    if (event.title && event.kind !== 'crash') {
+    if (event.title && event.kind !== 'crash' && event.kind !== 'finish') {
       const notice = $('stunt-notice');
       notice.querySelector('strong')!.textContent = event.title;
       notice.querySelector('span')!.textContent = event.detail;
@@ -640,13 +674,13 @@ function frame(now: number) {
     }
   }
   if (lastPhase !== sim.phase) {
-    if (sim.phase === 'crashed') finishRun();
+    if (sim.phase === 'crashed' || sim.phase === 'finished') finishRun();
     lastPhase = sim.phase;
   }
   if (noticeTime > 0 && sim.phase === 'playing') {
     noticeTime -= dt; if (noticeTime <= 0) $('stunt-notice').classList.remove('visible');
   }
-  if (sim.phase === 'crashed' || sim.phase === 'ready') $('stunt-notice').classList.remove('visible');
+  if (sim.phase === 'crashed' || sim.phase === 'finished' || sim.phase === 'ready') $('stunt-notice').classList.remove('visible');
   hudTime += dt; if (hudTime >= 0.05) { updateHud(); hudTime = 0; }
   ghostPose = ghostEnabled && sim.mode === 'run' && (sim.phase === 'playing' || sim.phase === 'paused') ? ghostAt(raceGhost, sim.elapsed) : null;
   audio.update(sim); world?.render(sim, dt, now / 1000, held.slam, lastThreat, ghostPose);
@@ -658,7 +692,9 @@ syncScreens(); requestAnimationFrame(frame);
 if (import.meta.env.DEV && new URLSearchParams(location.search).has('qa')) {
   Object.defineProperty(window, '__boostline', { value: {
     snapshot: () => ({ phase: sim.phase, mode: sim.mode, x: sim.x, lane: sim.lane, height: sim.height,
-      energy: sim.energy, distance: sim.distance, score: sim.score, tricksLanded: sim.tricksLanded,
+      energy: sim.energy, verticalSpeed: sim.verticalSpeed, distance: sim.distance, score: sim.score, tricksLanded: sim.tricksLanded,
+      route: sim.route ? { rings: [...sim.route.rings], banked: sim.route.banked, pending: sim.route.pending, next: sim.route.next, riding: sim.route.riding, launches: [...sim.route.launched] } : null,
+      routeScenery: world?.inspectRoute(), routeRecords: structuredClone(routeRecords), routeStored, rampPitch: sim.rampPitch,
       pendingTricks: sim.pendingTricks, trafficCount: sim.traffic.length, pitch: sim.pitch, roll: sim.roll,
       lesson: school.active ? school.lesson : null, lessonComplete: school.completed, lessonProgress: school.progress,
       flightTone: sim.airborne ? flightAssist(sim, held.slam).tone : 'grounded', landingMarker: world?.markerVisible,

@@ -98,7 +98,7 @@ export class GameAudio {
       if (event.landing.quality === 'clean') { this.tone(520, 620, 0.18); this.tone(780, 940, 0.22, 0.09); }
       else { this.tone(event.landing.quality === 'plain' ? 130 : 85, 45, 0.16); }
     } else {
-      const notes = { jump: [170, 380], trick: [430, 620], near: [350, 500] };
+      const notes = { jump: [170, 380], trick: [430, 620], near: [350, 500], ramp: [190, 460], ring: [660, 990], finish: [780, 1170] };
       const note = notes[event.kind as keyof typeof notes];
       if (note) this.tone(note[0], note[1], 0.16);
     }
