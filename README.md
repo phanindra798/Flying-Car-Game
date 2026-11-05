@@ -2,9 +2,9 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current version: v0.6.0 — Course selection and ring review.** Choose Coastline or the new Sky Switch route, keep separate per-car records for each, and review every ring after finishing or crashing.
+**Current version: v0.7.0 — Fullscreen play.** Settings and the pause menu now offer Play fullscreen / Exit fullscreen. Exiting fullscreen during gameplay pauses the run. Unsupported or denied requests show feedback and keep normal windowed play available.
 
-This update follows v0.5.0 and preserves existing Coastline records and garage progress.
+This update follows v0.6.0 and preserves existing courses, records and garage progress.
 
 ## Local development
 
@@ -231,3 +231,7 @@ Models are generated in code. The start-screen showroom redraws only when the ca
 The `.local/` directory is intentionally ignored by Git, blocked by the Vite development server and absent from the build output. It is reserved for personal notes and local verification artifacts. Do not force-add its contents or copy it into `public/`.
 
 The v0.6 browser check additionally completed Sky Switch, verified its eight-ring result review and separate record without overwriting a Coastline fixture, and checked the course picker at all four phone sizes.
+
+## Fullscreen play
+
+Open Settings or pause a run and choose **Play fullscreen**. Use **Exit fullscreen** or your browser’s exit gesture to leave it. A running game pauses on exit; choose Resume to continue. Fullscreen requires browser support and a user action. It does not lock orientation or install the game. Native desktop-browser entry/exit, denied requests, unsupported-browser feedback and four phone layouts were verified; physical mobile-browser behavior still needs testing.

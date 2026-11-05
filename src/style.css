@@ -554,3 +554,8 @@ h2 { font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif; font-s
 .route-review li[data-state='banked'] { color: #d6ff78; }
 .route-review li[data-state='missed'], .route-review li[data-state='lost'] { color: #ffad8a; }
 @media (max-width:720px) and (orientation:portrait) { .route-picker { flex: none; } }
+
+.fullscreen-status { font-size: 11px; line-height: 1.5; color: #c2dee0; }
+.fullscreen-status:empty { display: none; }
+[data-fullscreen] { min-height: 44px; }
+[data-fullscreen]:disabled { opacity: .55; cursor: not-allowed; }

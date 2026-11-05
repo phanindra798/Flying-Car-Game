@@ -1,4 +1,5 @@
 import './style.css';
+import { setupFullscreen } from './game/fullscreen';
 import { ROUTE_ID, ROUTES, getRoute, routeRecordKey, ROUTE_STATIONS, parseRouteRecords, betterRoute, routeMedal } from './game/stunt-route';
 import { CarShowcase } from './game/car-showcase';
 import { GARAGE_CARS, getCar, carPreview, type CarId } from './game/garage-cars';
@@ -23,7 +24,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="#" aria-label="BOOSTLINE home"><span class="brand-mark">B<span>↗</span></span><span>BOOSTLINE<small>FIND YOUR LINE.</small></span></a>
     <div class="route-badge"><span class="live-dot"></span> PACIFIC COAST <span class="route-number">/ 01</span></div>
-    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.6</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
+    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.7</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
   </header>
 
   <main>
@@ -70,7 +71,7 @@ app.innerHTML = `
 
     <div id="energy-panel" class="energy-panel" hidden><div class="energy-caption"><span><i></i> THRUSTER ENERGY</span><strong id="energy-number">100%</strong></div><div id="energy-meter" class="energy-track" role="progressbar" aria-label="Thruster energy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div id="energy-fill"></div></div><div class="energy-hint" id="energy-hint">Hold SPACE to fly · SHIFT to boost</div></div>
 
-    <section id="pause-panel" class="modal-card" aria-labelledby="pause-title" hidden><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Road's waiting.</h2><p>Your run is paused. Pick up right where you left off.</p><button id="resume" class="primary-button">Back to the road ${arrow}</button><button id="pause-restart" class="secondary-button">Restart run</button><button data-ghost-toggle class="secondary-button" aria-pressed="true">Ghost on</button><button id="pause-garage" class="secondary-button" data-garage-open>Garage & challenges</button><button id="pause-home" class="text-button">Main menu</button></section>
+    <section id="pause-panel" class="modal-card" aria-labelledby="pause-title" hidden><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Road's waiting.</h2><p>Your run is paused. Pick up right where you left off.</p><button id="resume" class="primary-button">Back to the road ${arrow}</button><button class="secondary-button" data-fullscreen aria-pressed="false">Play fullscreen</button><p class="fullscreen-status" data-fullscreen-status role="status"></p><button id="pause-restart" class="secondary-button">Restart run</button><button data-ghost-toggle class="secondary-button" aria-pressed="true">Ghost on</button><button id="pause-garage" class="secondary-button" data-garage-open>Garage & challenges</button><button id="pause-home" class="text-button">Main menu</button></section>
 
     <section id="results" class="modal-card results" aria-labelledby="results-title" hidden><span class="eyebrow" id="record-label">RUN COMPLETE</span><h2 id="results-title">One more run?</h2><p id="crash-reason"></p><div class="result-score"><span>FINAL SCORE</span><strong id="final-score">0</strong></div><div class="result-stats"><div><strong id="final-distance">0 m</strong><span>DISTANCE</span></div><div><strong id="final-combo">1×</strong><span>BEST COMBO</span></div><div><strong id="final-tricks">0</strong><span>LANDED TRICKS</span></div></div><div id="route-review" class="route-review" hidden></div><p id="route-result" class="route-result" hidden></p><p id="ghost-result" class="ghost-result" role="status"></p><div id="run-reward" class="run-reward" hidden><strong id="reward-total"></strong><p id="reward-breakdown"></p><p id="reward-challenge"></p><span id="reward-storage"></span></div><button id="retry" class="primary-button">Try again <span>R ${arrow}</span></button><button id="results-garage" class="secondary-button" data-garage-open>Visit garage</button><button id="results-home" class="text-button">Back to main menu</button></section>
 
@@ -89,6 +90,7 @@ app.innerHTML = `
     </dialog>
 
     <dialog id="settings" class="help-dialog settings-dialog" aria-labelledby="settings-title"><div class="help-heading"><span class="eyebrow">MAKE IT YOUR DRIVE</span><button id="settings-close" class="icon-button" aria-label="Close settings">×</button></div><h2 id="settings-title">Find your balance.</h2>
+      <button class="secondary-button" data-fullscreen aria-pressed="false">Play fullscreen</button><p class="fullscreen-status" data-fullscreen-status role="status"></p>
       <label class="settings-quality" for="graphics-quality">Graphics<select id="graphics-quality" aria-describedby="quality-description"><option value="performance">Performance</option><option value="balanced">Balanced</option><option value="quality">Quality</option></select></label>
       <p id="quality-description">Balanced detail for everyday play.</p>
       <label id="motion-setting" class="setting-check"><input id="reduced-effects" type="checkbox"><span>Reduce effects<small>Remove trails, bursts and boost camera widening.</small></span></label>
@@ -708,6 +710,7 @@ function frame(now: number) {
   audio.update(sim); world?.render(sim, dt, now / 1000, held.slam, lastThreat, ghostPose);
   requestAnimationFrame(frame);
 }
+setupFullscreen(() => { clearInput(); if (sim.phase === 'playing') togglePause(); });
 syncScreens(); requestAnimationFrame(frame);
 
 // Read-only inspection is available only in local development for browser checks.

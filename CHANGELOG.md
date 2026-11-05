@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.7.0 — Fullscreen play — 2026-11-05
+
+- Added synchronized fullscreen controls in Settings and the pause menu.
+- Paused active gameplay and cleared held inputs when leaving fullscreen.
+- Added unsupported/denied feedback and guarded repeated requests.
+- Verified native browser entry/exit, gameplay resume and four phone layouts.
+
 ## v0.6.0 — Course selection and ring review — 2026-11-04
 
 - Added Sky Switch: a 1.4 km course with higher rings and a different lane sequence.
