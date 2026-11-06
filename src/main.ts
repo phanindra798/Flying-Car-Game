@@ -1,4 +1,5 @@
 import './style.css';
+import { ACHIEVEMENT_KEY, BADGES, parseAchievements, earnedBadges, recordAchievementRun } from './game/achievements';
 import { setupFullscreen } from './game/fullscreen';
 import { ROUTE_ID, ROUTES, getRoute, routeRecordKey, ROUTE_STATIONS, parseRouteRecords, betterRoute, routeMedal } from './game/stunt-route';
 import { CarShowcase } from './game/car-showcase';
@@ -24,7 +25,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="#" aria-label="BOOSTLINE home"><span class="brand-mark">B<span>↗</span></span><span>BOOSTLINE<small>FIND YOUR LINE.</small></span></a>
     <div class="route-badge"><span class="live-dot"></span> PACIFIC COAST <span class="route-number">/ 01</span></div>
-    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.7</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
+    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.8</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
   </header>
 
   <main>
@@ -73,12 +74,13 @@ app.innerHTML = `
 
     <section id="pause-panel" class="modal-card" aria-labelledby="pause-title" hidden><span class="eyebrow">TAKE A BREATHER</span><h2 id="pause-title">Road's waiting.</h2><p>Your run is paused. Pick up right where you left off.</p><button id="resume" class="primary-button">Back to the road ${arrow}</button><button class="secondary-button" data-fullscreen aria-pressed="false">Play fullscreen</button><p class="fullscreen-status" data-fullscreen-status role="status"></p><button id="pause-restart" class="secondary-button">Restart run</button><button data-ghost-toggle class="secondary-button" aria-pressed="true">Ghost on</button><button id="pause-garage" class="secondary-button" data-garage-open>Garage & challenges</button><button id="pause-home" class="text-button">Main menu</button></section>
 
-    <section id="results" class="modal-card results" aria-labelledby="results-title" hidden><span class="eyebrow" id="record-label">RUN COMPLETE</span><h2 id="results-title">One more run?</h2><p id="crash-reason"></p><div class="result-score"><span>FINAL SCORE</span><strong id="final-score">0</strong></div><div class="result-stats"><div><strong id="final-distance">0 m</strong><span>DISTANCE</span></div><div><strong id="final-combo">1×</strong><span>BEST COMBO</span></div><div><strong id="final-tricks">0</strong><span>LANDED TRICKS</span></div></div><div id="route-review" class="route-review" hidden></div><p id="route-result" class="route-result" hidden></p><p id="ghost-result" class="ghost-result" role="status"></p><div id="run-reward" class="run-reward" hidden><strong id="reward-total"></strong><p id="reward-breakdown"></p><p id="reward-challenge"></p><span id="reward-storage"></span></div><button id="retry" class="primary-button">Try again <span>R ${arrow}</span></button><button id="results-garage" class="secondary-button" data-garage-open>Visit garage</button><button id="results-home" class="text-button">Back to main menu</button></section>
+    <section id="results" class="modal-card results" aria-labelledby="results-title" hidden><span class="eyebrow" id="record-label">RUN COMPLETE</span><h2 id="results-title">One more run?</h2><p id="crash-reason"></p><div class="result-score"><span>FINAL SCORE</span><strong id="final-score">0</strong></div><div class="result-stats"><div><strong id="final-distance">0 m</strong><span>DISTANCE</span></div><div><strong id="final-combo">1×</strong><span>BEST COMBO</span></div><div><strong id="final-tricks">0</strong><span>LANDED TRICKS</span></div></div><p id="badge-unlocks" class="badge-unlocks" role="status" hidden></p><div id="route-review" class="route-review" hidden></div><p id="route-result" class="route-result" hidden></p><p id="ghost-result" class="ghost-result" role="status"></p><div id="run-reward" class="run-reward" hidden><strong id="reward-total"></strong><p id="reward-breakdown"></p><p id="reward-challenge"></p><span id="reward-storage"></span></div><button id="retry" class="primary-button">Try again <span>R ${arrow}</span></button><button id="results-garage" class="secondary-button" data-garage-open>Visit garage</button><button id="results-home" class="text-button">Back to main menu</button></section>
 
     <dialog id="garage" class="help-dialog garage-dialog" aria-labelledby="garage-title">
       <div class="help-heading"><span class="eyebrow">YOUR COAST. YOUR COLOURS.</span><button id="garage-close" class="icon-button" aria-label="Close garage">×</button></div>
       <div class="garage-title-row"><h2 id="garage-title">Make it yours.</h2><strong id="garage-balance" aria-label="Credit balance">0 CR</strong></div>
       <section class="garage-challenge" aria-labelledby="challenge-title"><span id="challenge-count" class="eyebrow"></span><h3 id="challenge-title"></h3><p id="challenge-detail"></p><div class="challenge-track" id="challenge-meter" role="progressbar" aria-label="Current challenge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div><div class="challenge-summary"><span id="challenge-progress"></span><strong id="challenge-bonus"></strong></div></section>
+      <section class="achievement-board" aria-labelledby="achievement-title"><h3 id="achievement-title">Your achievements</h3><p id="achievement-summary"></p><div id="achievement-grid"></div><p id="achievement-storage"></p></section>
       <p class="garage-rules">Earn credits in scored runs. Each run has one challenge; claim rewards when it ends in a crash. Finish Stunt Route for 20 CR plus 6 per banked ring. Practice, abandoned routes and restarts earn nothing; highway challenges stay in scored traffic runs.</p>
       <div class="garage-shop">
         <div class="garage-tabs" role="group" aria-label="Garage category"><button type="button" data-garage-view="cars" aria-pressed="true" aria-controls="car-grid">Cars <span>7</span></button><button type="button" data-garage-view="paints" aria-pressed="false" aria-controls="paint-grid">Paints <span>4</span></button></div>
@@ -135,6 +137,9 @@ let profile = parseProfile(null);
 let progressStored = true;
 let resumeAfterGarage = false;
 let lastReward: RunReward | null = null;
+let achievements = parseAchievements(null), achievementsStored = true;
+let achievementSettled = false;
+try { achievements = parseAchievements(localStorage.getItem(ACHIEVEMENT_KEY)); } catch { achievementsStored = false; }
 try { profile = parseProfile(localStorage.getItem(PROGRESS_KEY)); } catch { progressStored = false; }
 let previewCar: CarId = profile.selectedCar;
 let selectedRoute = ROUTE_ID;
@@ -219,7 +224,7 @@ function focusRoad() { $('scene').querySelector('canvas')?.focus({ preventScroll
 function start(mode: Mode = 'run', guided = false) {
   if (!guided && sim.phase === 'ready' && !profile.cars.includes(previewCar)) return;
   clearInput(); sim.start(mode, 42, guided ? 'vector' : profile.selectedCar, selectedRoute); noticeTime = 0;
-  progression.begin(sim, profile); lastReward = null;
+  progression.begin(sim, profile); lastReward = null; achievementSettled = false;
   world?.setCar(sim.carId);
   recorder.start(sim); raceGhost = mode === 'run' ? savedGhost : null; ghostPose = null;
   world?.setGhostCar(raceGhost?.carId ?? 'vector');
@@ -423,6 +428,12 @@ function saveProgress() {
 }
 function progressStorageCopy() { return progressStored ? 'Saved on this browser.' : 'Session only: this browser could not save your progress.'; }
 function syncProgression(message = '') {
+  $('achievement-summary').textContent = `${earnedBadges(achievements).length} / ${BADGES.length} badges earned`;
+  $('achievement-grid').innerHTML = BADGES.map(badge => {
+    const value = Math.min(badge.target, achievements[badge.metric]), earned = value >= badge.target;
+    return `<article class="achievement-card" data-earned="${earned}"><strong>${earned ? '★' : '☆'} ${badge.name}</strong><p>${badge.detail}</p><progress max="${badge.target}" value="${value}" aria-label="${badge.name}"></progress><small>${earned ? 'Unlocked' : `${number(value)} / ${number(badge.target)}`}</small></article>`;
+  }).join('');
+  $('achievement-storage').textContent = `${achievementsStored ? 'Saved on this browser.' : 'Session only: achievements could not be saved.'} Counts start with this update. Practice and abandoned attempts do not count. Badges are cosmetic.`;
   $('garage-wallet').textContent = `${number(profile.credits)} CR`;
   $('garage-balance').textContent = `${number(profile.credits)} CR`;
   const live = (sim.phase === 'playing' || sim.phase === 'paused') && sim.mode === 'run';
@@ -608,6 +619,18 @@ function updateHud() {
 }
 
 function finishRun() {
+  if (!achievementSettled) {
+    achievementSettled = true;
+    const previous = earnedBadges(achievements);
+    const updated = recordAchievementRun(achievements, sim);
+    if (updated !== achievements) {
+      achievements = updated;
+      try { localStorage.setItem(ACHIEVEMENT_KEY, JSON.stringify(achievements)); achievementsStored = true; } catch { achievementsStored = false; }
+    }
+    const unlocked = earnedBadges(achievements).filter(badge => !previous.includes(badge));
+    $('badge-unlocks').hidden = !unlocked.length;
+    $('badge-unlocks').textContent = `★ Badge unlocked: ${unlocked.map(badge => badge.name).join(' · ')}${achievementsStored ? '' : ' · Session only'}`;
+  }
   lastReward = progression.settle(profile, sim);
   if (lastReward) { profile = lastReward.profile; saveProgress(); }
   syncProgression();
@@ -728,7 +751,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('qa')) {
       elapsed: sim.elapsed, ghostEnabled, ghostAvailable: !!savedGhost, ghostVisible: world?.ghostVisible,
       ghostPose, ghostDuration: raceGhost ? ghostDuration(raceGhost) : null,
       activePointers: touchPointers.size, pixelRatio: world?.renderer.getPixelRatio(), carBounds: world?.inspectCarBounds(),
-      previewCar, showcase: showcase?.inspect(), carId: sim.carId, renderedCar: world?.carId, ghostCar: world?.ghostCarId, speed: sim.speed, profile: { ...profile, owned: [...profile.owned], cars: [...profile.cars] }, challenge: progression.status(sim), lastReward, progressStored, paintColor: world?.paintColor,
+      achievements: { ...achievements }, achievementsStored, previewCar, showcase: showcase?.inspect(), carId: sim.carId, renderedCar: world?.carId, ghostCar: world?.ghostCarId, speed: sim.speed, profile: { ...profile, owned: [...profile.owned], cars: [...profile.cars] }, challenge: progression.status(sim), lastReward, progressStored, paintColor: world?.paintColor,
       graphics, effects: world?.inspectEffects(), audio: audio.inspect(), fps,
       renderCalls: world?.renderer.info.render.calls, geometries: world?.renderer.info.memory.geometries }),
   } });

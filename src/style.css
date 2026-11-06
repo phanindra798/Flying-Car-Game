@@ -559,3 +559,14 @@ h2 { font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif; font-s
 .fullscreen-status:empty { display: none; }
 [data-fullscreen] { min-height: 44px; }
 [data-fullscreen]:disabled { opacity: .55; cursor: not-allowed; }
+
+.achievement-board { margin: 20px 0; padding: 14px; border: 1px solid #80c6c850; border-radius: 10px; }
+#achievement-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.achievement-card { padding: 12px; border-radius: 8px; background: #12333c; min-width: 0; }
+.achievement-card strong { font-size: 12px; }
+.achievement-card p, #achievement-storage { font-size: 11px; line-height: 1.5; }
+.achievement-card progress { width: 100%; height: 8px; accent-color: #d6ff78; }
+.achievement-card small { display: block; font-size: 10px; margin-top: 5px; }
+.achievement-card[data-earned='true'], .badge-unlocks { color: #d6ff78; }
+.badge-unlocks { padding: 12px; border: 1px solid #d6ff7860; border-radius: 8px; font-size: 13px; }
+@media(max-width:360px) { #achievement-grid { grid-template-columns: 1fr; } }

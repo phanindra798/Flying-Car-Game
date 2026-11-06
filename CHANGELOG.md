@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.0 — Achievement board — 2026-11-06
+
+- Added six cosmetic achievement badges with persistent progress cards in the garage.
+- Added result-screen announcements for newly earned badges and per-attempt settlement guards.
+- Counted completed highway attempts and finished stunt routes, excluding practice and abandoned attempts.
+- Added validated saves, session-only feedback and four focused achievement tests.
+
 ## v0.7.0 — Fullscreen play — 2026-11-05
 
 - Added synchronized fullscreen controls in Settings and the pause menu.

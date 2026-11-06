@@ -2,9 +2,9 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current version: v0.7.0 — Fullscreen play.** Settings and the pause menu now offer Play fullscreen / Exit fullscreen. Exiting fullscreen during gameplay pauses the run. Unsupported or denied requests show feedback and keep normal windowed play available.
+**Current release: v0.8.0 — Achievement board.** Six persistent badges give long-term goals for routes, distance, stunts, rings, Gold finishes and high scores. The garage shows progress and results announce new unlocks.
 
-This update follows v0.6.0 and preserves existing courses, records and garage progress.
+**Latest published version: v0.8.0.**
 
 ## Local development
 
@@ -235,3 +235,9 @@ The v0.6 browser check additionally completed Sky Switch, verified its eight-rin
 ## Fullscreen play
 
 Open Settings or pause a run and choose **Play fullscreen**. Use **Exit fullscreen** or your browser’s exit gesture to leave it. A running game pauses on exit; choose Resume to continue. Fullscreen requires browser support and a user action. It does not lock orientation or install the game. Native desktop-browser entry/exit, denied requests, unsupported-browser feedback and four phone layouts were verified; physical mobile-browser behavior still needs testing.
+
+## Achievements
+
+Open Garage to see six badges: First finish (one completed stunt route), Coast explorer (5,000 cumulative metres), Rotation artist (10 cleanly banked flips/rolls), Ring collector (24 banked rings), Gold pilot (one eight-ring finish), and High scorer (10,000 points in a single completed attempt). Highway attempts count when they end in a crash; stunt routes count only when finished. Practice, restarts, abandoned attempts and interrupted stunt routes do not count. Progress starts with this update; historical totals are not inferred. Badges are cosmetic and award no extra credits or car stats.
+
+Validated totals are stored separately under `boostline.achievements.v1`. Unsupported/corrupt saves reset only these totals. Storage failures keep badges for the current session and show feedback. Garage ownership, course records and highway ghosts remain separate.
