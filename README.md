@@ -2,9 +2,9 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current release: v0.8.0 — Achievement board.** Six persistent badges give long-term goals for routes, distance, stunts, rings, Gold finishes and high scores. The garage shows progress and results announce new unlocks.
+**Current release: v0.9.0 — Live achievement goals.** Six persistent badges give long-term goals for routes, distance, stunts, rings, Gold finishes and high scores. The garage shows progress and results announce new unlocks.
 
-**Latest published version: v0.8.0.**
+**Latest published version: v0.9.0.**
 
 ## Local development
 
@@ -241,3 +241,7 @@ Open Settings or pause a run and choose **Play fullscreen**. Use **Exit fullscre
 Open Garage to see six badges: First finish (one completed stunt route), Coast explorer (5,000 cumulative metres), Rotation artist (10 cleanly banked flips/rolls), Ring collector (24 banked rings), Gold pilot (one eight-ring finish), and High scorer (10,000 points in a single completed attempt). Highway attempts count when they end in a crash; stunt routes count only when finished. Practice, restarts, abandoned attempts and interrupted stunt routes do not count. Progress starts with this update; historical totals are not inferred. Badges are cosmetic and award no extra credits or car stats.
 
 Validated totals are stored separately under `boostline.achievements.v1`. Unsupported/corrupt saves reset only these totals. Storage failures keep badges for the current session and show feedback. Garage ownership, course records and highway ghosts remain separate.
+
+### Live achievement goals
+
+Scored runs show your closest unfinished distance, landed-stunt or high-score badge; stunt routes can also track ring collection. The goal stays fixed throughout the attempt. A compact bar previews progress without saving it early: finish the route or complete the highway attempt to bank it. Practice hides the tracker. Once these eligible badges are earned, the tracker disappears; finish and Gold badges remain visible in Garage. Invalid achievement saves reset consistently instead of retaining partially validated fields.

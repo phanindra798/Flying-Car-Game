@@ -1,5 +1,5 @@
 import './style.css';
-import { ACHIEVEMENT_KEY, BADGES, parseAchievements, earnedBadges, recordAchievementRun } from './game/achievements';
+import { ACHIEVEMENT_KEY, BADGES, parseAchievements, earnedBadges, recordAchievementRun, nextAchievement, liveAchievementValue } from './game/achievements';
 import { setupFullscreen } from './game/fullscreen';
 import { ROUTE_ID, ROUTES, getRoute, routeRecordKey, ROUTE_STATIONS, parseRouteRecords, betterRoute, routeMedal } from './game/stunt-route';
 import { CarShowcase } from './game/car-showcase';
@@ -25,7 +25,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="#" aria-label="BOOSTLINE home"><span class="brand-mark">B<span>↗</span></span><span>BOOSTLINE<small>FIND YOUR LINE.</small></span></a>
     <div class="route-badge"><span class="live-dot"></span> PACIFIC COAST <span class="route-number">/ 01</span></div>
-    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.8</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
+    <div class="top-actions"><span class="build-badge">OPEN ROAD <span>v0.9</span></span><button id="sound" class="icon-button" aria-label="Mute sound" aria-pressed="false">${volumeIcon}</button><button id="settings-open" class="icon-button" aria-label="Graphics and effects settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#243739"/><circle cx="16" cy="17" r="3" fill="#243739"/></svg></button><button id="pause" class="icon-button" aria-label="Pause game" hidden>${pauseIcon}</button></div>
   </header>
 
   <main>
@@ -56,7 +56,7 @@ app.innerHTML = `
     </aside>
 
     <section id="hud" class="hud" aria-label="Run statistics" hidden>
-      <div class="score-block"><span class="hud-label" id="run-label">CURRENT RUN</span><strong id="score">000000</strong><div class="score-meta"><span id="distance">0 M</span><span id="combo">1× COMBO</span></div><div id="route-hud" class="route-hud" hidden><strong id="route-next"></strong><span id="route-hint"></span><div id="route-progress" class="route-progress" aria-label="Stunt ring progress"></div><span id="route-banked"></span></div><div id="challenge-hud" class="challenge-hud" hidden></div><div id="ghost-status" class="ghost-status" hidden></div><div id="traffic-warning" class="traffic-warning" role="status" hidden><span id="traffic-message"></span><span id="traffic-gap" aria-hidden="true"></span></div></div>
+      <div class="score-block"><span class="hud-label" id="run-label">CURRENT RUN</span><strong id="score">000000</strong><div class="score-meta"><span id="distance">0 M</span><span id="combo">1× COMBO</span></div><div id="route-hud" class="route-hud" hidden><strong id="route-next"></strong><span id="route-hint"></span><div id="route-progress" class="route-progress" aria-label="Stunt ring progress"></div><span id="route-banked"></span></div><div id="challenge-hud" class="challenge-hud" hidden></div><div id="achievement-live" class="achievement-live" hidden><span id="achievement-live-label"></span><progress id="achievement-live-progress" aria-label="Next badge progress"></progress></div><div id="ghost-status" class="ghost-status" hidden></div><div id="traffic-warning" class="traffic-warning" role="status" hidden><span id="traffic-message"></span><span id="traffic-gap" aria-hidden="true"></span></div></div>
       <div class="speed-block"><span class="hud-label">GROUND SPEED</span><strong id="speed">0 <small>KM/H</small></strong><span id="flight-state" class="flight-state">ON THE ROAD</span><span id="flight-detail" class="flight-detail"></span><span id="fps-counter" class="fps-counter" hidden></span></div>
     </section>
 
@@ -139,6 +139,7 @@ let resumeAfterGarage = false;
 let lastReward: RunReward | null = null;
 let achievements = parseAchievements(null), achievementsStored = true;
 let achievementSettled = false;
+let trackedAchievement: ReturnType<typeof nextAchievement>;
 try { achievements = parseAchievements(localStorage.getItem(ACHIEVEMENT_KEY)); } catch { achievementsStored = false; }
 try { profile = parseProfile(localStorage.getItem(PROGRESS_KEY)); } catch { progressStored = false; }
 let previewCar: CarId = profile.selectedCar;
@@ -225,6 +226,7 @@ function start(mode: Mode = 'run', guided = false) {
   if (!guided && sim.phase === 'ready' && !profile.cars.includes(previewCar)) return;
   clearInput(); sim.start(mode, 42, guided ? 'vector' : profile.selectedCar, selectedRoute); noticeTime = 0;
   progression.begin(sim, profile); lastReward = null; achievementSettled = false;
+  trackedAchievement = nextAchievement(achievements, mode);
   world?.setCar(sim.carId);
   recorder.start(sim); raceGhost = mode === 'run' ? savedGhost : null; ghostPose = null;
   world?.setGhostCar(raceGhost?.carId ?? 'vector');
@@ -559,6 +561,15 @@ function finishSchool() {
 }
 
 function updateHud() {
+  $('achievement-live').hidden = !trackedAchievement || sim.phase !== 'playing';
+  if (trackedAchievement && sim.phase === 'playing') {
+    const value = liveAchievementValue(achievements, sim, trackedAchievement);
+    const reached = value >= trackedAchievement.target;
+    $('achievement-live-label').textContent = reached ? `★ ${trackedAchievement.name} · ${sim.mode === 'stunt' ? 'Finish route' : 'End run'} to save` : `☆ ${trackedAchievement.name} · ${number(value)} / ${number(trackedAchievement.target)}`;
+    const bar = $('achievement-live-progress') as HTMLProgressElement;
+    bar.max = trackedAchievement.target; bar.value = value;
+    $('achievement-live').dataset.reached = String(reached);
+  }
   $('route-hud').hidden = sim.mode !== 'stunt' || sim.phase !== 'playing';
   if (sim.route && sim.phase === 'playing') {
     const next = sim.route.next;

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.0 — Live achievement goals — 2026-11-07
+
+- Added a compact live goal and progress bar for the closest eligible unfinished badge.
+- Kept preview progress separate from saved achievements, with completion reminders.
+- Hid tracking in practice and when eligible badges are complete.
+- Fixed partial recovery of malformed achievement saves; added regression coverage.
+
 ## v0.8.0 — Achievement board — 2026-11-06
 
 - Added six cosmetic achievement badges with persistent progress cards in the garage.
