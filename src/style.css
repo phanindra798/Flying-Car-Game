@@ -577,3 +577,8 @@ h2 { font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif; font-s
 .achievement-live[data-reached='true'] { color: #d6ff78; }
 @media(max-width:480px) { .achievement-live { max-width: 165px; font-size: 8px; } }
 @media(max-height:450px) { .achievement-live { max-width: 190px; font-size: 8px; margin-top: 3px; } }
+
+.run-debrief { margin: 16px 0; padding: 12px; border: 1px solid #80c6c850; border-radius: 8px; background: #12333c; }
+.run-debrief h3 { margin: 0 0 8px; font-size: 14px; }
+.run-debrief p { font-size: 12px; line-height: 1.5; margin: 6px 0; }
+#run-comparison { color: #d6ff78; }
