@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.0 — Run breakdown — 2026-11-09
+
+- Added travel/bonus point breakdown and duration to results.
+- Added previous-best score comparisons and contextual next-run tips.
+- Kept route completion requirements explicit.
+
 ## v0.9.0 — Live achievement goals — 2026-11-07
 
 - Added a compact live goal and progress bar for the closest eligible unfinished badge.

@@ -2,9 +2,9 @@
 
 A mobile-first browser arcade highway stunt runner, with desktop keyboard support. Pick a lane, jump over traffic, spend thruster energy, complete a flip or barrel roll, and land to bank your points.
 
-**Current release: v0.9.0 — Live achievement goals.** Six persistent badges give long-term goals for routes, distance, stunts, rings, Gold finishes and high scores. The garage shows progress and results announce new unlocks.
+**Current release: v0.10.0 — Run breakdown.** Six persistent badges give long-term goals for routes, distance, stunts, rings, Gold finishes and high scores. The garage shows progress and results announce new unlocks.
 
-**Latest published version: v0.9.0.**
+**Latest published version: v0.10.0.**
 
 ## Local development
 
@@ -245,3 +245,7 @@ Validated totals are stored separately under `boostline.achievements.v1`. Unsupp
 ### Live achievement goals
 
 Scored runs show your closest unfinished distance, landed-stunt or high-score badge; stunt routes can also track ring collection. The goal stays fixed throughout the attempt. A compact bar previews progress without saving it early: finish the route or complete the highway attempt to bank it. Practice hides the tracker. Once these eligible badges are earned, the tracker disappears; finish and Gold badges remain visible in Garage. Invalid achievement saves reset consistently instead of retaining partially validated fields.
+
+### Run breakdown
+
+Results separate travel points from banked bonus points and show attempt duration. Highway scores compare with the previous highway best; completed stunt routes compare with the selected car/course score. Interrupted routes explain that completion is required. A next-run tip suggests a clean flip, combo building or ring collection based on the attempt. This adds feedback without changing scoring or rewards.
